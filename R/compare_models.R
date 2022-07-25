@@ -21,7 +21,7 @@ compare_models <- function(
   # get model names
   mnames <- names(model_list)
   if(is.null(mnames)){
-    mnames <- paste0(c("m", 1:length(model_list)))
+    mnames <- paste0("m", 1:length(model_list))
   }
   model_df <- data.frame(
     model = mnames,
@@ -50,7 +50,7 @@ compare_models <- function(
   model_df$cumltvWt <- cumsum(model_df$AICwt)
   if(!is.null(digits)){
     model_df$AIC <- round(model_df$AIC, digits = digits)
-    model_df$delta <- round(model_df$AIC, digits = digits)
+    model_df$delta <- round(model_df$delta, digits = digits)
     model_df$AICwt <- round(model_df$AICwt, digits = digits)
     model_df$cumltvWt <- round(model_df$cumltvWt, digits = digits)
   }

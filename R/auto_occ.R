@@ -1,5 +1,5 @@
 auto_occ <- function(formula, y, det_covs = NULL, occ_covs = NULL,
-                     method = "BFGS",...){
+                     method = "BFGS", level = 0.95,...){
   # parse the formulas real quick
   if(length(formula)!= 3){
     stop("Double right-hand side formula required")
@@ -75,12 +75,12 @@ auto_occ <- function(formula, y, det_covs = NULL, occ_covs = NULL,
     SE = sqrt(diag(solve(fit$hessian)))
   )
   mle_table$lower <- qnorm(
-    0.025,
+    (1-level)/2,
     mle_table$Est,
     mle_table$SE
   )
   mle_table$upper <- qnorm(
-    0.975,
+    1 - (1-level)/2,
     mle_table$Est,
     mle_table$SE
   )
@@ -89,6 +89,7 @@ auto_occ <- function(formula, y, det_covs = NULL, occ_covs = NULL,
 
   to_return <- new(
     "auto_occ_fit",
+    fitType = "auto_occ_fit",
     call = match.call(),
     formula = formula,
     y = y,
@@ -97,8 +98,8 @@ auto_occ <- function(formula, y, det_covs = NULL, occ_covs = NULL,
     opt = fit,
     negLogLike = fit$value,
     nllFun = negloglik,
-    detcovs = rho_dm,
-    occcovs = occ_dm
+    detcovs = det_covs,
+    occcovs = occ_covs
   )
   return(to_return)
 

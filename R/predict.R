@@ -1,20 +1,15 @@
-newdata <- data.frame(
-  x = seq(-3,3,length.out = 50),
-  j = factor("B", levels = c("A","B")))
-
-# things to do, get the dm stuff to work.
 
 setMethod(
   "predict",
-  "auto_occ_fit",
-  function(model,type, newdata = NULL,backTransform = TRUE,level = 0.95){
+  signature(object = "auto_occ_fit"),
+  function(object,type, newdata = NULL,backTransform = TRUE,level = 0.95){
     if(missing(type)){
       stop("Supply either 'psi' or 'rho' as type for predictions.")
     }
     if(!type %in% c("psi","rho")){
       stop("type must be either' psi' for occupancy or 'rho' for detection." )
     }
-    char <- lapply(model@formula, function(x) {
+    char <- lapply(object@formula, function(x) {
       paste(deparse(x), collapse = "")
     })
     if(type == "psi"){
@@ -26,49 +21,87 @@ setMethod(
       is.null(newdata)
     ){
      if(type == "psi"){
-       newdata <- model@occcovs
+       newdata <- object@occcovs
      }else{
-       newdata <- model@detcovs
+       newdata <- object@detcovs
 
      }
     }
 
-    # get the old dm
+#get the old dm
     data <- ifelse(
       type == "psi",
-      model@occcovs,
-      model@deccovs)
-    mf <- model.frame(my_formula, model@, na.action=stats::na.pass)
-    X.terms <- stats::terms(data[[1]])
+      object@occcovs,
+      object@detcovs
+    )
+    names(data) <- ifelse(
+      type == "psi",
+      names(object@occcovs),
+      names(object@detcovs)
+    )
+    # check if temporally varying psi
+    if(all(sapply(sapply(data, nrow),is.null))){
+      data <- data.frame(data)
+    }
+
+    mf <- get_dm(data, my_formula = my_formula, type = type, y = object@y)
     fac_cols <- data[, sapply(data, is.factor), drop=FALSE]
     xlevs <- lapply(fac_cols, levels)
     xlevs <- xlevs[names(xlevs) %in% names(mf)]
-    nmf <- model.frame(my_formula, newdata, na.action=stats::na.pass, xlev = c("A","B"))
-    #X <- model.matrix(X.terms, newdata, xlev=xlevs)
-    X <- model.matrix(form_nobars, nmf)
+    nmf <- model.frame(my_formula, newdata, na.action=stats::na.pass, xlev = xlevs)
+    X <- model.matrix(my_formula, newdata, xlev=xlevs)
     offset <- model.offset(nmf)
 
     # get variance covariance matrix
     covMat <- vcov(
-      model,
+      object,
       type = type
     )
 
-    est <- model@estimates
+    est <- object@estimates
     est <- est$Est[grep(type,est$parameter)]
-    if (is.null(offset))
-      offset <- rep(0, nrow(coefficients))
-    e <- as.vector(coefficients %*% est) + offset
-    v <- coefficients %*% covMat %*% t(coefficients)
-    if (!is.null(obj@covMatBS)) {
-      v.bs <- coefficients %*% obj@covMatBS %*% t(coefficients)
-    } else {
-      v.bs <- NULL
+    if (is.null(offset)){
+      offset <- rep(0, nrow(X))
     }
-    umelc <- new("unmarkedLinComb", parentEstimate = obj,
-                 estimate = e, covMat = v, covMatBS = v.bs,
-                 coefficients = coefficients)
-    umelc
+    # without theta
+    e1 <- as.vector(cbind(X,0) %*% est) + offset
+    # with theta
+    e2 <- as.vector(cbind(X,1) %*% est) + offset
+    # calculate expected occupancy
+    e3 <- plogis(e1) / (plogis(e1) + (1 - plogis(e2)))
+    # and transform back to logit scale
+    e <- log(e3/(1-e3))
+    # get the SE
+    v <- cbind(X,1) %*% covMat %*% t(cbind(X,1))
+    pred_se <- sqrt(diag(v))
 
+    my_levels <-(1 - level)/2
+    lower_ci <- qnorm(
+      my_levels,
+      e,
+      pred_se
+    )
+    upper_ci <-qnorm(
+      1 - my_levels,
+      e,
+      pred_se
+    )
+
+    if(backTransform){
+      pred_frame <- data.frame(
+        estimate = plogis(e),
+        lower = plogis(lower_ci),
+        upper = plogis(upper_ci),
+        SE = pred_se
+      )
+    } else {
+      pred_frame <- data.frame(
+        estimate = e,
+        lower = lower_ci,
+        upper = upper_ci,
+        SE = pred_se
+      )
+      return(pred_frame)
+    }
   }
 )

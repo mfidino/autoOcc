@@ -24,30 +24,51 @@ setMethod("vcov", "auto_occ_fit",
             }
           })
 
-setMethod("linearComb",
-          signature(obj = "unmarkedEstimate", coefficients = "matrixOrVector"),
-          function(obj, coefficients, offset = NULL, re.form = NULL)
-          {
-            if(!is(coefficients, "matrix"))
-              coefficients <- t(as.matrix(coefficients))
-            est <- obj@estimates
-            covMat <- obj@covMat
-            if(!is.null(re.form) & .hasSlot(obj, "fixed")){
-              est <- est[obj@fixed]
-              covMat <- covMat[obj@fixed, obj@fixed, drop=FALSE]
-            }
-            stopifnot(ncol(coefficients) == length(est))
-            if (is.null(offset))
-              offset <- rep(0, nrow(coefficients))
-            e <- as.vector(coefficients %*% est) + offset
-            v <- coefficients %*% covMat %*% t(coefficients)
-            if (!is.null(obj@covMatBS)) {
-              v.bs <- coefficients %*% obj@covMatBS %*% t(coefficients)
-            } else {
-              v.bs <- NULL
-            }
-            umelc <- new("unmarkedLinComb", parentEstimate = obj,
-                         estimate = e, covMat = v, covMatBS = v.bs,
-                         coefficients = coefficients)
-            umelc
-          })
+setMethod("SE", "auto_occ_fit", function(obj,...)
+{
+  v <- vcov(obj,...)
+  sqrt(diag(v))
+})
+
+setMethod("confint","auto_occ_fit",
+          function(object,parm, level = 0.95,type){
+
+  if(missing(type)){
+    stop("Must specify type as either 'psi' or 'rho'")
+  }
+  if(missing(parm)){
+    parm <- grep(type, object@estimates$parameter)
+  }else{
+    to_grep <- paste0("psi - ", parm, collapse = "|")
+    parm <- which(object@estimates$parameter %in% to_grep)
+    if(length(parm)<1){
+      stop(
+        paste0(
+          "One or more of parm supplied are not in model.",
+        )
+      )
+    }
+  }
+
+  ests <- object@estimates[parm,]
+  lwr <- qnorm(
+    (1 - level)/2,
+    ests$Est,
+    ests$SE
+  )
+  upr <- qnorm(
+    (1 - (1 - level)/2),
+    ests$Est,
+    ests$SE
+  )
+  return(
+    data.frame(
+      parameter = ests$parameter,
+      Est = ests$Est,
+      lower = lwr,
+      upper = upr
+    )
+  )
+
+})
+

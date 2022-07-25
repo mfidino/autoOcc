@@ -25,6 +25,7 @@ get_dm <- function(x, my_formula, type = c("psi","rho"), y){
       to_return[[i]] <- tmp
     }
     return(to_return)
+    temp_var_psi <- FALSE
   }
   # if temporally varying psi
   if(
@@ -61,6 +62,7 @@ get_dm <- function(x, my_formula, type = c("psi","rho"), y){
       )
       return(to_return)
     }
+    temp_var_psi <- TRUE
   }
   if(
     type == "rho"
