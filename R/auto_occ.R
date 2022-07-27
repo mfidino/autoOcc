@@ -44,22 +44,51 @@
 #' know if a species occupied a site in a previous time step
 #' (as sampling has not occurred). Thus, to generate the occupancy probability
 #' at the first time step we have two nearly identical logit linear predictors.
-#' Assuming an intercept only model this would be:
+#' Given a vector of parameters (\eqn{\boldsymbol{\beta}};
+#'  i.e., the occupancy intercept and slope terms) and a matrix of
+#'  covariates whose leading column is a vector of 1's (\eqn{\boldsymbol{X}}),
+#'  the probability of occupancy during the first time step is:
 #'
-#' \deqn{logit(\psi_{i,t=1}) = \beta_0}
-#' \deqn{logit(\phi_{i,t=1}) = \beta_0 + \theta}
+#' \deqn{\LARGE\psi_{i,t=1} = \frac{\mathrm{ilogit}(\boldsymbol{\beta}\boldsymbol{x}_{i})}{
+#' \mathrm{ilogit}(\boldsymbol{\beta}\boldsymbol{x}_{i}) + (1 - \mathrm{ilogit}(\boldsymbol{\beta}\boldsymbol{x}_{i} + \theta)}}
 #'
-#' where the second equation is just the same as the first but with the added
-#' auto-regressive term that is informed by the data from the remaining
-#' seasons. From this, we can derive the equilibrium, or expected,
-#' occupancy at the first time step such that:
+#' \deqn{\Large z_{i,t=1}\sim \mathrm{Bernoulli}(\psi_{i,t=1})}
 #'
-#' \deqn{E(\psi)}
+#' Where ilogit is the inverse logit-link. This may seem somewhat complicated for
+#' setting the occupancy of the initial sampling period, but this is the way to
+#' derive the expected occupancy from an autologistic occupancy model. We do this
+#' because we do not know species presence before we start sampling, and so
+#' we condition on the possibility of both states (either the species was there or was not in t-1). Given
+#' this model parameterization, we essentially assume that the population is at equilibrium in the
+#' first sampling period.
 #'
-#'  We don't know if
-#' .
-#' If we assume equilibrium at T = 1, then let \eqn{\psi_{i,t=1}} be the
+#' Following the first time period, we can model the rest of the latent state as
 #'
+#' \deqn{\Large z_{i,t}\sim \mathrm{Bernoulli}(\psi_{i,t}), t>1}
+#'
+#' where
+#'
+#' \deqn{\Large \mathrm{logit}(\psi{i,t}) = \boldsymbol{\beta}\boldsymbol{x}_{i} + \theta \times z_{i,t-1} }
+#'
+#' Note that it is absolutely possible to have time-varying covariates in this
+#' portion of the model, and \code{auto_occ()} can accommodate this.
+#'
+#'
+#' For \eqn{j} in \eqn{1, \dots, J} repeated samples during each sample period,
+#' the observational or detection model is:
+#'
+#' \deqn{\Large y_{i,t,j}|z_{i,t} \sim \mathrm{Bernoulli}(\rho_{i,t,j} \times z_{i,t,j})}
+#'
+#' where \eqn{\rho_{i,t,j}} is the probability of detecting the species at site i, primary sampling
+#' period t, and secondary sample j given the species presence. This probability can
+#' be made a function of covariates with the logit link. For ease of explanation,
+#' I am assuming there is only spatial variation in a species detection probability (
+#' although you can incorporate variation across primary and secondary sampling periods
+#' if you wish to do so). For \eqn{d} in \eqn{1, \dots, D} detection parameters which includes
+#' the intercept let \eqn{\boldsymbol{a}} be  a vector of parameters and \eqn{\boldsymbol{W}} be an \eqn{I \times D} design matrix whose first column
+#' is a vector of 1's to accommodate the intercept such that
+#'
+#' \deqn{\Large \mathrm{logit}(\rho_{i,t,j}) = \boldsymbol{a w_i}}
 #' @export
 #' @importFrom stats as.formula
 #' @importFrom stats optim
