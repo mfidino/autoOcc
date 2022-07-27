@@ -1,3 +1,23 @@
+#' @title Compare auto_occ models via AIC
+#'
+#' @description Given a (preferabbly named) list of models, calculate AIC,
+#'  delta AIC, and cumulative model weight.
+#'
+#'
+#' @param model_list A list of models of class auto_off_fit. If the list is not
+#' named then the models will be given a numeric identifier based on their location
+#' in the list.
+#'
+#' @param add_formula Whether you want the formula of each model added to the
+#' data.frame. Defaults to FALSE.
+#'
+#' @param digits the number of digits to be reported for each numeric column
+#' in the data.frame. Exists as an easy way to generate what could be a 'close
+#' to publication ready' AIC results table for a given analysis. Defaults to NULL.
+#'
+#'
+#' @export
+
 compare_models <- function(
     model_list,
     add_formula = FALSE,

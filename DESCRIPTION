@@ -1,11 +1,12 @@
 Package: autoOcc
 Type: Package
-Title: What the Package Does (Title Case)
+Title: Fits autologistic occupancy models
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
-License: What license is it under?
+Author: person("Mason", "Fidino","mfidino@lpzoo.org", role = c("aut","cre"))
+Maintainer: Mason Fidino <mfidino@lpzoo.org>
+Description: Fits autologistic occupancy models, compares sets of models, and generates model predictions.
+License: MIT + file LICENSE
 Encoding: UTF-8
+Depends: methods, stats
 LazyData: true
+RoxygenNote: 7.2.0

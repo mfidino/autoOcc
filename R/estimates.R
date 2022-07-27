@@ -1,5 +1,27 @@
+#' @title Get variance covariance matrix from autologistic occupancy model.
+#'
+#' @description Given a \code{"auto_occ_fit"} model. Derive the variance /
+#' covariance matrix for either occupancy (\code{"psi}) or detection (\code{"rho}).
+#' @rdname vcov-methods
+#'
+#' @method vcov auto_occ_fit
+#'
+#' @param object Object of class inheriting from \code{"auto_occ_fit"}.
+#'
+#' @param type Either \code{"psi"} for occupancy or \code{"rho"} for detection.
+#' If type is not supplied, provide entire variance covariance matrix.
+#'
+#' @param ... Additional arguments. Not currently used.
+#' @aliases vcov,auto_occ_fit
+#' @docType methods
+#'
+#'
+#'
+#' @export
+
+
 setMethod("vcov", "auto_occ_fit",
-          function (object, type , ...)
+          function (object, type, ...)
           {
             if (is.null(object@opt$hessian)) {
               stop("Hessian was not computed for this model.")
@@ -24,14 +46,49 @@ setMethod("vcov", "auto_occ_fit",
             }
           })
 
-setMethod("SE", "auto_occ_fit", function(obj,...)
-{
-  v <- vcov(obj,...)
-  sqrt(diag(v))
-})
+#' @title Get Standard Error from autologistic occupancy model.
+#'
+#' @description Calculates standard error from the variance covariance matrix
+#' of an \code{"auto_occ_fit"} model.
+#'
+#'
+#' @param object Object of class inheriting from \code{"auto_occ_fit"}.
+#' @param ... Other arguments to be passed to \code{vcov.auto_occ_fit}.
+#'
+#'
+#' @export
 
+SE <- function(object,...){
+  if(class(object)!= auto_occ_fit){
+    stop("object must be of class auto_occ_fit")
+  }
+  v <- vcov(object,...)
+  sqrt(diag(v))
+}
+
+
+
+#' @title Calculate confidence intervals for model parameters.
+#'
+#' @rdname confint-methods
+#'
+#' @method confint auto_occ_fit
+#'
+#' @param object Object of class inheriting from \code{"auto_occ_fit"}.
+#' @param parm a specification of which parameters to be given confidence
+#' intervals. See details for additional details.
+#' @param level the confidence level required.
+#' @param type must be either \code{"psi"} for occupancy or \code{"rho"} for detection.
+#' @param ... Additional arguments to be supplied.
+
+#' @aliases confint,auto_occ_fit-method
+#' @docType methods
+#' @export
+#'
+#'
+#'
 setMethod("confint","auto_occ_fit",
-          function(object,parm, level = 0.95,type){
+          function(object,parm, level = 0.95,type,...){
 
   if(missing(type)){
     stop("Must specify type as either 'psi' or 'rho'")

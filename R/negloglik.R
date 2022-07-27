@@ -1,4 +1,18 @@
-
+#' Likelihood function for auto_occ (internal).
+#'
+#' @param parms the parameters to estimate
+#'
+#' @param y A three-dimensional array of species detections. The first dimension
+#' is sites, the second dimension denotes primary sampling periods, and the third
+#' dimension denotes the secondary sampling periods within each primary sampling
+#' period. If the species was detected on a given survey, that element would receive
+#' a 1, otherwise it is 0. If sampling did not occur for a given sampling period, those
+#' elements should be NA.
+#'
+#' @param cov_list A list of covariates supplied by \code{auto_occ}.
+#' @importFrom stats plogis
+#'
+#' @noRd
 negloglik <- function(parms,y,cov_list){
 
   # get names of psi parameters

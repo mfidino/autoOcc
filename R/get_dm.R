@@ -1,3 +1,24 @@
+#' Generate design matrix for fitting autologistic occuapncy models (internal).
+#'
+#' @param x the occupancy or detection list / data.frame.
+#'
+#' @param formula the specific formula for either occupancy or detection.
+#'
+#' @param type Either \code{"psi"} for occupancy or \code{"rho"} for detection.
+#'
+#' @param y A three-dimensional array of species detections. The first dimension
+#' is sites, the second dimension denotes primary sampling periods, and the third
+#' dimension denotes the secondary sampling periods within each primary sampling
+#' period. If the species was detected on a given survey, that element would receive
+#' a 1, otherwise it is 0. If sampling did not occur for a given sampling period, those
+#' elements should be NA.
+#'
+#' @importFrom stats model.frame
+#' @importFrom stats model.matrix
+#'
+#' @noRd
+
+
 get_dm <- function(x, my_formula, type = c("psi","rho"), y){
   # if just a site by nparam matrix for psi
   nsite <- dim(y)[1]
@@ -45,11 +66,11 @@ get_dm <- function(x, my_formula, type = c("psi","rho"), y){
           }
         }
       )
-      to_return[[i]] <- data.frame(
-        dplyr::bind_cols(
-          to_return[[i]]
-        )
+      to_return[[i]] <- do.call(
+        "cbind",
+        to_return[[i]]
       )
+
       colnames(to_return[[i]]) <- names(x)
       to_return[[i]] <- model.frame(
         formula = my_formula,
@@ -85,11 +106,8 @@ get_dm <- function(x, my_formula, type = c("psi","rho"), y){
             }
           }
         )
-        tmp <- data.frame(
-          dplyr::bind_cols(
-            tmp
-          )
-        )
+        tmp <- do.call("cbind", tmp)
+
         tmp <- model.frame(
           formula = my_formula,
           data = tmp,

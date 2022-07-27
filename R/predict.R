@@ -1,3 +1,31 @@
+#' @title Makes predictions from an autologistic occupancy model
+#'
+#' @rdname predict-methods
+#'
+#' @docType methods
+#'
+#' @method predict auto_occ_fit
+#'
+#' @description Predicted values based on a \code{auto_occ_fit} model object.
+#'
+#' @param newdata A data.frame of covariates to make predictions from.
+#' See details for more information.
+#' @param object Object of class inheriting from \code{"auto_occ_fit"}.
+#'
+#' @param type Either \code{"psi"} for occupancy or \code{"rho"} for detection.
+#' See details for how expected occupancy is derived from this model object.
+#'
+#' @param backTransform Should predictions be converted back to the probability
+#' scale. Defaults to \code{TRUE}.
+#'
+#' @param level Tolerance / confidence level for predictions. Defaults to \code{0.95}.
+#'
+#' @aliases predict,auto_occ_fit-method
+#' @importFrom stats model.frame
+#' @importFrom stats model.matrix
+#' @importFrom stats model.offset
+#'
+#' @export
 
 setMethod(
   "predict",
