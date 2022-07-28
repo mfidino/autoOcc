@@ -66,8 +66,7 @@ get_dm <- function(x, my_formula, type = c("psi","rho"), y){
           }
         }
       )
-      to_return[[i]] <- do.call(
-        "cbind",
+      to_return[[i]] <- dplyr::bind_cols(
         to_return[[i]]
       )
 
@@ -106,7 +105,9 @@ get_dm <- function(x, my_formula, type = c("psi","rho"), y){
             }
           }
         )
-        tmp <- do.call("cbind", tmp)
+        tmp <- dplyr::bind_cols(
+          tmp
+        )
 
         tmp <- model.frame(
           formula = my_formula,

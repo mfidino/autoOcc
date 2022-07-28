@@ -42,8 +42,8 @@ negloglik <- function(parms,y,cov_list){
       psi[,i] <- cov_list$psi[[i]] %*% psi_parms
   }
   psi_theta <- psi + theta
-  psi <- plogis(psi)
-  psi_theta <- plogis(psi_theta)
+  psi_prob <- plogis(psi)
+  psi_theta_prob <- plogis(psi_theta)
 
   rho <- array(
     NA,
@@ -55,29 +55,33 @@ negloglik <- function(parms,y,cov_list){
       rho[,i,j] <- cov_list$rho[[i]][[j]] %*% rho_parms
     }
   }
-  rho <- plogis(rho)
+  rho_prob <- plogis(rho)
   # get initial occupancy
-  init_psi <- psi[,1] / (psi[,1] + (1 - psi_theta[,1]))
+  #init_psi <- psi[,1] / (psi[,1] + (1 - psi_theta[,1]))
+  #psi_mat <- cbind(
+  #  init_psi,
+  #  1 - init_psi
+  #)
   psi_mat <- cbind(
-    init_psi,
-    1 - init_psi
+    psi_prob[,1],
+    1 - psi_prob[,1]
   )
   tpm <- array(
     c(
-      psi_theta,psi, 1 - psi_theta, 1 - psi
+      psi_theta_prob,psi_prob, 1 - psi_theta_prob, 1 - psi_prob
     ),
     dim = c(nsite, nseason, 2,2)
   )
 
-  rho_mat <- function(y,rho){
-    j <- sum(!is.na(y))
-    ndet <- sum(y, na.rm = TRUE)
-    y <- y[!is.na(y)]
+  rho_mat <- function(my_y,my_rho){
+    j <- sum(!is.na(my_y))
+    ndet <- sum(my_y, na.rm = TRUE)
+    my_y <- my_y[!is.na(my_y)]
     to_return <-
       diag(
         c(
           prod(
-            ifelse(y>0, rho, 1-rho)
+            ifelse(my_y>0, my_rho, 1-my_rho)
           ),
           ifelse(ndet>0, 0, 1)
         )
@@ -89,15 +93,17 @@ negloglik <- function(parms,y,cov_list){
   for(i in 1:nsite){
     for(t in 1:nseason){
       if(t == 1){
-        tmp_mat <- psi_mat[i,] %*% rho_mat(y[i,t,], rho = rho[i,t,])
+        tmp_mat <- psi_mat[i,] %*% rho_mat(y[i,t,], my_rho = rho_prob[i,t,])
+        next
       }
       if(t != nseason){
-        tmp_mat <- tmp_mat %*% tpm[i,t,,] %*% rho_mat(y[i,t,], rho = rho[i,t,])
+        tmp_mat <- tmp_mat %*% tpm[i,t,,] %*% rho_mat(y[i,t,], my_rho = rho_prob[i,t,])
+        next
       }
       if(t == nseason){
         tmp_mat <- tmp_mat %*% tpm[i,t,,] %*% matrix(
           diag(
-            rho_mat(y[i,t,], rho = rho[i,t,])
+            rho_mat(y[i,t,], my_rho = rho_prob[i,t,])
           ), ncol = 1
         )
       }
