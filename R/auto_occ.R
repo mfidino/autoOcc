@@ -33,62 +33,79 @@
 #'
 #' @details
 #'
-#' The autologistic formulation of a standard occupancy model is a simplified
+#' The autologistic occupancy model can be seen as a very simplified
 #' version of a dynamic occupancy model that makes inference on species
 #' patterns of occupancy from one time period to the next such that species
 #' presence at a site during one time step may modify the probability a species
 #' occupies that same site in the following time step. This is done through the
 #' inclusion of a single logit-scale autoregressive term into the model: \eqn{\theta}.
-#' For \eqn{t} in \eqn{1 \dots T} and \eqn{i} in \eqn{1 \dots I} sites, let
+#' For \eqn{i} in \eqn{1 \dots I} sites and \eqn{t} in \eqn{1 \dots T} primary sampling periods, let
 #' \eqn{z_{i,t}} be a species latent occupancy state. For T=1, we do not
 #' know if a species occupied a site in a previous time step
-#' (as sampling has not occurred). Thus, to generate the occupancy probability
-#' at the first time step we have two nearly identical logit linear predictors.
-#' Given a vector of parameters (\eqn{\boldsymbol{\beta}};
+#' (as sampling has not occurred). THus, given a vector of parameters (\eqn{\boldsymbol{\beta}};
 #'  i.e., the occupancy intercept and slope terms) and a matrix of
 #'  covariates whose leading column is a vector of 1's (\eqn{\boldsymbol{X}}),
-#'  the probability of occupancy during the first time step is:
+#'  the probability of occupancy during the first time step is the logit-linear predictor
+#' at the first time step is:
 #'
-#' \deqn{\LARGE\psi_{i,t=1} = \frac{\mathrm{ilogit}(\boldsymbol{\beta}\boldsymbol{x}_{i})}{
-#' \mathrm{ilogit}(\boldsymbol{\beta}\boldsymbol{x}_{i}) + (1 - \mathrm{ilogit}(\boldsymbol{\beta}\boldsymbol{x}_{i} + \theta)}}
+#' \deqn{\Large\mathrm{logit}(\psi_{i,t=1}) = \boldsymbol{\beta}\boldsymbol{x}_{i}}
+#'
+#'where
 #'
 #' \deqn{\Large z_{i,t=1}\sim \mathrm{Bernoulli}(\psi_{i,t=1})}
 #'
-#' Where ilogit is the inverse logit-link. This may seem somewhat complicated for
-#' setting the occupancy of the initial sampling period, but this is the way to
-#' derive the expected occupancy from an autologistic occupancy model. We do this
-#' because we do not know species presence before we start sampling, and so
-#' we condition on the possibility of both states (either the species was there or was not in t-1). Given
-#' this model parameterization, we essentially assume that the population is at equilibrium in the
-#' first sampling period.
-#'
-#' Following the first time period, we can model the rest of the latent state as
-#'
-#' \deqn{\Large z_{i,t}\sim \mathrm{Bernoulli}(\psi_{i,t}), t>1}
-#'
-#' where
+#' Following the first time-step, we introduce \eqn{\theta} to help account for changes in occupancy
+#' at time t given their presence at the same site at time t-1. Thus, for the remaining
+#' time periods the logit-linear predictor is
 #'
 #' \deqn{\Large \mathrm{logit}(\psi{i,t}) = \boldsymbol{\beta}\boldsymbol{x}_{i} + \theta \times z_{i,t-1} }
 #'
-#' Note that it is absolutely possible to have time-varying covariates in this
-#' portion of the model, and \code{auto_occ()} can accommodate this.
 #'
+#' where
 #'
-#' For \eqn{j} in \eqn{1, \dots, J} repeated samples during each sample period,
-#' the observational or detection model is:
+#'\deqn{\Large z_{i,t}\sim \mathrm{Bernoulli}(\psi_{i,t}), t>1}
 #'
-#' \deqn{\Large y_{i,t,j}|z_{i,t} \sim \mathrm{Bernoulli}(\rho_{i,t,j} \times z_{i,t,j})}
+#' For the data model, let \eqn{\boldsymbol{Y}} be a site by primary sampling period by observation period
+#' array (i.e., a three dimensional array). Thus, for \eqn{i} in \eqn{1 \dots I} sites, \eqn{t} in \eqn{1 \dots T} primary sampling periods and
+#' \eqn{j} in \eqn{1 \dots J} observation events within a given time period (i.e., secondary samples within a primary sampling period), the scalar
+#' \eqn{y_{i,t,j}} can the value of 1 if the species was detected, 0 if it was not detected but sampling occurred, and NA
+#' if sampling did not occur. Therefore, you can consider the vector \eqn{y_{i,t,1:J}} the detection history for a species at site \eqn{i} and time
+#' \eqn{t}. When creating this array for \code{auto_occ}, it is important that \eqn{J} equal the max number of
+#' observation events that happened across all time periods. Thus, if there is variation in the amount of sampling
+#' events across time periods you can pad the time periods with less data with NA values.
 #'
-#' where \eqn{\rho_{i,t,j}} is the probability of detecting the species at site i, primary sampling
-#' period t, and secondary sample j given the species presence. This probability can
-#' be made a function of covariates with the logit link. For ease of explanation,
-#' I am assuming there is only spatial variation in a species detection probability (
-#' although you can incorporate variation across primary and secondary sampling periods
-#' if you wish to do so). For \eqn{d} in \eqn{1, \dots, D} detection parameters which includes
-#' the intercept let \eqn{\boldsymbol{a}} be  a vector of parameters and \eqn{\boldsymbol{W}} be an \eqn{I \times D} design matrix whose first column
-#' is a vector of 1's to accommodate the intercept such that
+#' Given a vector of parameters (\eqn{\boldsymbol{\alpha}};
+#'  i.e., the detection intercept and slope terms) and a matrix of
+#'  covariates whose leading column is a vector of 1's (\eqn{\boldsymbol{W}}),
+#'  the logit-linear predictor for the data model is
 #'
-#' \deqn{\Large \mathrm{logit}(\rho_{i,t,j}) = \boldsymbol{a w_i}}
+#' \deqn{\Large\mathrm{logit}(\rho_{i,t,j}) = \boldsymbol{\alpha}\boldsymbol{w}_{i}}
+#'
+#' where
+#'
+#' \deqn{\Large y_{i,t,j}\sim \mathrm{Bernoulli}(\rho_{i,t,j} \times z_{i,t})}
+#'
+#' Note that in this example detection probability only varied by sites, but this
+#' level of the model can incorporate covariates that vary be site, time period, or
+#' observation.
+#'
+#' Just like with a dynamic occupancy model, estimates of site occupancy
+#' is a derived parameter, and is most easily handled with using
+#' \code{predict()}. Nevertheless, calculating expected occupancy
+#' can be done with the following equation:
+#'
+#'\deqn{\Large
+#'  \frac{
+#'    \mathrm{ilogit}(\boldsymbol{\beta}\boldsymbol{x}_{i})
+#'  }{
+#'  \mathrm{ilogit}(\boldsymbol{\beta}\boldsymbol{x}_{i}) + (1 - \mathrm{ilogit}(\boldsymbol{\beta}\boldsymbol{x}_{i} + \theta))
+#'  }
+#'}
+#'
+#' Keeping in mind that your covariate structure may vary (here there
+#' is simply variation by sites). Again, \code{predict()} can easily
+#' handle this for you.
+#'
 #' @export
 #' @importFrom stats as.formula
 #' @importFrom stats optim

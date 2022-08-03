@@ -3,7 +3,6 @@
 \docType{methods}
 \name{vcov,auto_occ_fit-method}
 \alias{vcov,auto_occ_fit-method}
-\alias{vcov,auto_occ_fit}
 \title{Get variance covariance matrix from autologistic occupancy model.}
 \usage{
 \S4method{vcov}{auto_occ_fit}(object, type, ...)

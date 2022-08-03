@@ -8,25 +8,88 @@
 #'
 #' @description Predicted values based on a \code{auto_occ_fit} model object.
 #'
-#' @param newdata A data.frame of covariates to make predictions from.
-#' See details for more information.
 #' @param object Object of class inheriting from \code{"auto_occ_fit"}.
+#'
+#' @param newdata Optionally, a data.frame of covariates to make predictions from.
+#' If omitted, the fitted linear predictors are used.
 #'
 #' @param type Either \code{"psi"} for occupancy or \code{"rho"} for detection.
 #' See details for how expected occupancy is derived from this model object.
 #'
-#' @param backTransform Should predictions be converted back to the probability
-#' scale. Defaults to \code{TRUE}.
-#'
 #' @param level Tolerance / confidence level for predictions. Defaults to \code{0.95}.
+#'
+#' @param nsim The number of parmater simulations to be made via the
+#' models estimated parameters, variance covariance matrix,
+#' and \code{\link[mvtnorm]{rmvnorm}}. Defaults to 3000.
+#'
+#' @param seed The random seed to set for simulations, defaults to \code{NULL}.
 #'
 #' @aliases predict,auto_occ_fit-method
 #' @importFrom stats model.frame
 #' @importFrom stats model.matrix
 #' @importFrom stats model.offset
+#' @importFrom stats quantile
 #' @importFrom mvtnorm rmvnorm
 #'
 #' @export
+#'@details
+#'
+#' This function takes the output of an \code{\link[autoOcc]{auto_occ}}
+#' model and will generate predictions for either occupancy (\code{type = "psi"})
+#' or detection (\code{type = "rho"}). If \code{newdata} is supplied, all
+#' covariates supplied to that level of the model must be present except for
+#' the case of the autologistic occupancy term (that is handled). To
+#' approximate uncertainty in model estimates, this function first uses
+#' \code{\link[mvtnorm]{rmvnorm}} to generate parameter estimates from
+#' multivariate distribution with a mean vector equal to the model parameters
+#' and a variance covariance matrix supplied by the \code{\link[autoOcc]{auto_occ}}
+#' model. For occupancy, each set of simulated parameters is used to
+#' generate two logit-linear predictions for the supplied covariates:
+#'
+#' \deqn{\Large \mathrm{logit}(\psi_a) = \beta_0 + \beta_1 \times x_1 + \dots + \beta_n \times x_n}
+#'
+#'and
+#'
+#'\deqn{\Large \mathrm{logit}(\psi_b) = \beta_0 + \beta_1 \times x_1 + \dots + \beta_n \times x_n + \theta}
+#'
+#' where \eqn{\theta} is the estimated autologistic term. Following this, the expected occupancy of an autologisitic occupancy model is
+#'
+#' \deqn{\Large
+#'  \frac{
+#'    \mathrm{ilogit}(\psi_a)
+#'  }{
+#'  \mathrm{ilogit}(\psi_a) + (1 - \mathrm{ilogit}(\psi_b))
+#'  }
+#'}
+#' which is similar to the expected occupancy of a dynamic occupancy model (\eqn{\gamma \div (\gamma + \epsilon)})
+#' where \eqn{\gamma} is colonization and \eqn{\epsilon} is extinction. Following this calculation for all simuated
+#' parameter estimates and covariate values, the median estimate and confidence intervals are collected.
+#'
+#' Detection predictions are more straight-forward given there is no need to
+#' derive the expected value.
+#'
+#' If \code{newdata} is supplied, then  data.frame will be returned that has the
+#' same number of rows as \code{newdata} with three columns: \code{estimate},
+#' \code{lower}, and \code{upper}. If \code{newdata} is not supplied, then the output will
+#' depend on the covariates the model was fitted with:
+#'
+#' 1. For occupancy with no temporal variation in covariates, a data.frame will be returned
+#'    that lines up with the covariates provided when the occupancy model was fit.
+#' 2. For occupancy with temporal variation across primary sampling periods, a list of data frames will
+#'    be returned, one for each primary sampling period.
+#' 3. For detection with no temporal variation in covariates, a data.frame will be returned
+#'    that lines up with the covariates provided when the occupancy model was fit.
+#' 4. For detection with temporal variation across primary sampling periods, a list of data frames will
+#'    be returned, one for each primary period.
+#' 5. For detection with temporal varaition across secondary observation periods, a nested
+#'    list of data.frames will be returned, one for each primary and secondary sampling period. This
+#'    make time a substantial amount of time to do these calculations, and therefore it is not
+#'    recommended (i.e., use \code{newdata} instead).
+#' estimates are
+#' made for each time period for occupancy (resulting in a list of dataframes, one for each time period) or
+#' for each time and secondary observation period for detection (resulting in a
+#' nested list of data.frames).
+#'
 
 setMethod(
   "predict",
@@ -92,7 +155,7 @@ setMethod(
     if(!is.null(seed)){
       set.seed(seed = seed)
     }
-    mvn_samples <- rmvnorm(
+    mvn_samples <- mvtnorm::rmvnorm(
       nsim,
       mean=est,
       sigma=covMat,
@@ -118,7 +181,7 @@ setMethod(
       apply(
         e3,
         1,
-        quantile,
+        stats::quantile,
         probs = c(my_levels, 0.5, 1 - my_levels)
       )
     )

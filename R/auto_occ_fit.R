@@ -1,3 +1,5 @@
+setClassUnion("dataframe_or_list", c("data.frame", "list"))
+
 #' An S4 class to represent the fitted autologistic occupancy model
 #
 #' @slot fitType The class of the fitted model object.
@@ -82,4 +84,4 @@ setMethod("show", "auto_occ_fit", function(object)
 })
 
 
-setClassUnion("dataframe_or_list", c("data.frame", "list"))
+

@@ -12,10 +12,8 @@
 #' If type is not supplied, provide entire variance covariance matrix.
 #'
 #' @param ... Additional arguments. Not currently used.
-#' @aliases vcov,auto_occ_fit
+#' @aliases vcov,auto_occ_fit-method
 #' @docType methods
-#'
-#'
 #'
 #' @export
 
@@ -45,27 +43,6 @@ setMethod("vcov", "auto_occ_fit",
               return (v[inds, inds, drop = FALSE])
             }
           })
-
-#' @title Get Standard Error from autologistic occupancy model.
-#'
-#' @description Calculates standard error from the variance covariance matrix
-#' of an \code{"auto_occ_fit"} model.
-#'
-#'
-#' @param object Object of class inheriting from \code{"auto_occ_fit"}.
-#' @param ... Other arguments to be passed to \code{vcov.auto_occ_fit}.
-#'
-#'
-#' @export
-
-SE <- function(object,...){
-  if(class(object)!= auto_occ_fit){
-    stop("object must be of class auto_occ_fit")
-  }
-  v <- vcov(object,...)
-  sqrt(diag(v))
-}
-
 
 
 #' @title Calculate confidence intervals for model parameters.

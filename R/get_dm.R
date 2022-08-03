@@ -66,7 +66,8 @@ get_dm <- function(x, my_formula, type = c("psi","rho"), y){
           }
         }
       )
-      to_return[[i]] <- dplyr::bind_cols(
+      to_return[[i]] <- do.call(
+        "cbind.data.frame",
         to_return[[i]]
       )
 
@@ -87,15 +88,54 @@ get_dm <- function(x, my_formula, type = c("psi","rho"), y){
   if(
     type == "rho"
   ){
+    #quick checks, give -1 if no temporal variation
+    ncols <- sapply(
+        x,
+        function(k){
+          cc <- ncol(k)
+          ifelse(is.null(cc), -1, cc)
+        }
+      )
+
+    for(i in 1:length(ncols)){
+      ncols[[i]] <- ncols[[i]] == -1 |
+        ncols[[i]] == nseason |
+        ncols[[i]] == (nseason * nrep)
+    }
+    if(sum(ncols) != length(x)){
+      baddies <- which(ncols!=1)
+      error_report <- paste0(
+        "Detection covariates must either be a vector,\n",
+        "a matrix with a number of columns equal to the\n",
+        "number of primary sampling periods, or a matrix with\n",
+        "a number of columns equal to the number of primary\n",
+        "sampling periods times the number of secondary observations\n",
+        "within time periods. These covariates are not properly\n",
+        "set up: ", paste0(names(x)[baddies] , collapse = ", ")
+      )
+      stop(error_report)
+    }
+
     to_return <- vector("list", length = nseason)
+    names(to_return) <- paste0(
+      "time_", 1:nseason
+    )
     for(i in 1:nseason){
       for(j in 1:nrep){
         if(j == 1){
           to_return[[i]] <- vector("list", length = nrep)
+          names(to_return[[i]]) <- paste0(
+            "observation_", 1:nrep
+          )
         }
         tmp <-  lapply(
           x,
           function(k){
+            # if no temporal variation
+            if(is.null(ncol(k))){
+              return(k)
+            }
+            # if variation across each sampling period
             if(ncol(k) == nseason){
               return(k[,i])
             } else{
@@ -105,7 +145,8 @@ get_dm <- function(x, my_formula, type = c("psi","rho"), y){
             }
           }
         )
-        tmp <- dplyr::bind_cols(
+        tmp <- do.call(
+          "cbind.data.frame",
           tmp
         )
 
@@ -124,5 +165,3 @@ get_dm <- function(x, my_formula, type = c("psi","rho"), y){
     return(to_return)
   }
 }
-
-

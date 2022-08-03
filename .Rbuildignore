@@ -1,4 +1,5 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
 testing.R
-./R/bayes_ao.R
+^JAGS
+
