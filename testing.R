@@ -188,8 +188,10 @@ data_list <- list(
 mout <- run.jags("./R/bayes_ao.R",
                  data = data_list,
                  monitor = c("beta","theta","alpha"),
-                 n.chains = 2,
+                 n.chains = 4,
                  module = "glm",
+                 burnin = 5000,
+                 sample = 20000,
                  method = "parallel",
                  inits = list(z = matrix(1, nrow = data_list$nsite, ncol = data_list$nseason)))
 
@@ -281,7 +283,7 @@ pred1 <- plogis(mcmc %*% t(cbind(1, pdat,0)))
 pred2 <- plogis(mcmc %*% t(cbind(1, pdat,1)))
 
 my_est <- pred1 / (pred1 + (1 - pred2))
-mcmc_est <- t(apply(my_est, 2, quantile, probs= c(0.025,0.5,0.975)))
+mcmc_est <- t(apply(my_est, 2, quantile, probs= c(0.025,0.5,0.975)))[,c(2,1,3)]
 
 range1 <- hm$upper - hm$lower
 range2 <- my_est[,3] - my_est[,1]
