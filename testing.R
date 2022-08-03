@@ -3,6 +3,7 @@ all_funcs <- list.files(
   "./R/",
   full.names = TRUE
 )
+all_funcs <- all_funcs[-grep("bayes|boot", all_funcs)]
 
 sapply(
   all_funcs,
@@ -161,15 +162,15 @@ for(i in 1:nrepeats){
     rho
   )
 }
-y <- matrix(
-  rbinom(
-    length(rho),
-    nrepeats,
-    rho
-  ),
-  ncol = nyear,
-  nrow = nsite
-)
+# y <- matrix(
+#   rbinom(
+#     length(rho),
+#     nrepeats,
+#     rho
+#   ),
+#   ncol = nyear,
+#   nrow = nsite
+# )
 
 
 data_list <- list(
@@ -199,9 +200,9 @@ oc1 <- data.frame(
 )
 
 my_det <- list(
-  x1 = matrix(oc1$x1, nrow = nsite, ncol = nseason),
-  x2 = matrix(oc1$x2, nrow = nsite, ncol = nseason),
-  x3 = matrix(oc1$x3, nrow = nsite, ncol = nseason)
+  x1 = matrix(oc1$x1, nrow = data_list$nsite, ncol = data_list$nseason),
+  x2 = matrix(oc1$x2, nrow = data_list$nsite, ncol = data_list$nseason),
+  x3 = matrix(oc1$x3, nrow = data_list$nsite, ncol = data_list$nseason)
 )
 m2 <- auto_occ(
   ~x1+x2+x3 ~x1+x2+x3 ,
@@ -262,4 +263,66 @@ legend(
 
 pdat <- data.frame(x1 = seq(-3,3,0.05), x2=0,x3=0)
 
-hm <- predict(m2, newdata = pdat, type = "psi")
+jj <- predict(m2, newdata = pdat, type = "psi", nsim = 5000)
+jj$estimate <- plogis(jj$estimate)
+yo <- matrix(NA, ncol =2, nrow = nrow(jj))
+yo[,1] <- qnorm(c(0.025), jj$estimate, jj$SE)
+yo[,2] <- qnorm(c(0.975), jj$estimate, jj$SE)
+plot(hm$estimate ~ pdat$x1, type = 'l', ylim = c(0,1))
+lines(hm$lower ~ pdat$x1, lty = 2)
+lines(hm$upper ~ pdat$x1, lty = 2)
+
+# do same with bayes model
+mcmc <- do.call("rbind", mout$mcmc)[,1:5]
+
+
+
+pred1 <- plogis(mcmc %*% t(cbind(1, pdat,0)))
+pred2 <- plogis(mcmc %*% t(cbind(1, pdat,1)))
+
+my_est <- pred1 / (pred1 + (1 - pred2))
+mcmc_est <- t(apply(my_est, 2, quantile, probs= c(0.025,0.5,0.975)))
+
+range1 <- hm$upper - hm$lower
+range2 <- my_est[,3] - my_est[,1]
+
+plot(range2 ~ pdat$x1, type = 'l')
+lines(range1 ~ pdat$x1, lty = 2)
+longshot <- t(apply(pred2, 2, quantile, probs= c(0.025,0.5,0.975)))
+
+
+
+
+mcmc <- do.call("rbind", mout$mcmc)[,1:5]
+
+pmcmc <- hm[,1:5]
+
+pred1 <- plogis(pmcmc %*% t(cbind(1, pdat,0)))
+pred2 <- plogis(pmcmc %*% t(cbind(1, pdat,1)))
+
+my_est <- pred1 / (pred1 + (1 - pred2))
+bootsie <- t(apply(my_est, 2, quantile, probs= c(0.025,0.5,0.975)))
+
+range1 <- hm$upper - hm$lower
+range2 <- my_est[,3] - my_est[,1]
+range3 <- bootsie[,3] - bootsie[,1]
+
+plot(range2 ~ pdat$x1, type = 'l')
+lines(range1 ~ pdat$x1, lty = 2)
+longshot <- t(apply(pred2, 2, quantile, probs= c(0.025,0.5,0.975)))
+
+plot(mcmc_est[,2] ~ pdat$x1, type = "l", ylim = c(0,1))
+
+lines(bootsie[,2] ~ pdat$x1, col = "red", lwd = 2)
+
+plot(bootsie[,2] ~ pdat$x1, type = "l", ylim = c(0,1))
+lines(bootsie[,1] ~ pdat$x1, lty = 2, lwd = 2)
+lines(bootsie[,3] ~ pdat$x1, lty = 2, lwd = 2)
+
+plot(mcmc_est[,2] ~ pdat$x1, type = "l", ylim = c(0,1))
+lines(mcmc_est[,1] ~ pdat$x1, lty = 2, lwd = 2)
+lines(mcmc_est[,3] ~ pdat$x1, lty = 2, lwd = 2)
+
+plot(jj$estimate ~ pdat$x1, type = "l", ylim = c(0,1))
+lines(jj$lower ~ pdat$x1, lty = 2, lwd = 2)
+lines(jj$upper ~ pdat$x1, lty = 2, lwd = 2)

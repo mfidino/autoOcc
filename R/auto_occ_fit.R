@@ -33,7 +33,7 @@ setClass("auto_occ_fit",
                         negLogLike = "numeric",
                         nllFun = "function",
                         detcovs = "list",
-                        occcovs = "list"))
+                        occcovs = "dataframe_or_list"))
 
 # constructor for auto_occ_fit objects
 auto_occ_fit <- function(fitType, call, formula, y,
@@ -80,3 +80,6 @@ setMethod("show", "auto_occ_fit", function(object)
   if(!identical(object@opt$convergence, 0L))
     warning("Model did not converge. Try providing starting values or increasing maxit control argment.")
 })
+
+
+setClassUnion("dataframe_or_list", c("data.frame", "list"))

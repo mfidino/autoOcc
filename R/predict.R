@@ -24,13 +24,14 @@
 #' @importFrom stats model.frame
 #' @importFrom stats model.matrix
 #' @importFrom stats model.offset
+#' @importFrom mvtnorm rmvnorm
 #'
 #' @export
 
 setMethod(
   "predict",
   signature(object = "auto_occ_fit"),
-  function(object,type, newdata = NULL,backTransform = TRUE,level = 0.95){
+  function(object,type, newdata = NULL,level = 0.95, nsim = 3000, seed = NULL){
     if(missing(type)){
       stop("Supply either 'psi' or 'rho' as type for predictions.")
     }
@@ -52,24 +53,20 @@ setMethod(
        newdata <- object@occcovs
      }else{
        newdata <- object@detcovs
-
      }
     }
 
 #get the old dm
-    data <- ifelse(
-      type == "psi",
-      object@occcovs,
-      object@detcovs
-    )
-    names(data) <- ifelse(
-      type == "psi",
-      names(object@occcovs),
-      names(object@detcovs)
-    )
+    if(type == "psi"){
+      data <- object@occcovs
+    } else {
+      data <- object@detcovs
+    }
     # check if temporally varying psi
     if(all(sapply(sapply(data, nrow),is.null))){
-      data <- data.frame(data)
+      data <- as.data.frame(data)
+    } else{
+      stop("Temporally varying covariates not set up for predictions.")
     }
 
     mf <- get_dm(data, my_formula = my_formula, type = type, y = object@y)
@@ -91,45 +88,47 @@ setMethod(
     if (is.null(offset)){
       offset <- rep(0, nrow(X))
     }
-    # without theta
-    e1 <- as.vector(cbind(X,0) %*% est) + offset
-    # with theta
-    e2 <- as.vector(cbind(X,1) %*% est) + offset
-    # calculate expected occupancy
-    e3 <- plogis(e1) / (plogis(e1) + (1 - plogis(e2)))
-    # and transform back to logit scale
-    e <- log(e3/(1-e3))
-    # get the SE
-    v <- cbind(X,1) %*% covMat %*% t(cbind(X,1))
-    pred_se <- sqrt(diag(v))
 
-    my_levels <-(1 - level)/2
-    lower_ci <- qnorm(
-      my_levels,
-      e,
-      pred_se
-    )
-    upper_ci <-qnorm(
-      1 - my_levels,
-      e,
-      pred_se
-    )
-
-    if(backTransform){
-      pred_frame <- data.frame(
-        estimate = plogis(e),
-        lower = plogis(lower_ci),
-        upper = plogis(upper_ci),
-        SE = pred_se
-      )
-    } else {
-      pred_frame <- data.frame(
-        estimate = e,
-        lower = lower_ci,
-        upper = upper_ci,
-        SE = pred_se
-      )
-      return(pred_frame)
+    if(!is.null(seed)){
+      set.seed(seed = seed)
     }
+    mvn_samples <- rmvnorm(
+      nsim,
+      mean=est,
+      sigma=covMat,
+      method="svd"
+    )
+    # logit-predictions without theta
+    if(type == "psi"){
+      e1 <- cbind(X,0) %*% t(mvn_samples)
+      e1 <- sweep(e1, 1, offset, FUN = "+")
+      # logit-predictions with theta
+      e2 <- cbind(X,1) %*% t(mvn_samples)
+      e2 <- sweep(e2, 1, offset, FUN = "+")
+      # calculate expected occupancy
+      e3 <- plogis(e1) / (plogis(e1) + (1 - plogis(e2)))
+    }
+    if(type == "rho"){
+      e2 <- X %*% t(mvn_samples)
+      e2 <- sweep(e2, 1, offset, FUN = "+")
+      e3 <- plogis(e3)
+    }
+    my_levels <-(1 - level)/2
+    predictions <- t(
+      apply(
+        e3,
+        1,
+        quantile,
+        probs = c(my_levels, 0.5, 1 - my_levels)
+      )
+    )
+    pred_frame <- data.frame(
+      estimate = predictions[,2],
+      lower = predictions[,1],
+      upper = predictions[,3]
+    )
+    return(pred_frame)
+
   }
 )
+
