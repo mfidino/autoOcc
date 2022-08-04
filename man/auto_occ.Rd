@@ -19,21 +19,34 @@ auto_occ(
 detection (rho) and occupancy (psi) in that order.}
 
 \item{y}{A three-dimensional array of species detections. The first dimension
-is sites, the second dimension denotes primary sampling periods, and the third
-dimension denotes the secondary sampling periods within each primary sampling
+is sites, the second dimension is primary sampling periods, and the third
+dimension is the secondary sampling periods within each primary sampling
 period. If the species was detected on a given survey, that element would receive
 a 1, otherwise it is 0. If sampling did not occur for a given sampling period, those
 elements should be NA.}
 
-\item{det_covs}{A named list of detection covariates. See details for additional
-information on how to format this list.}
+\item{det_covs}{A named list of detection covariates. If a given covariate
+does not vary temporally, then that list element can be a vector of length nsite (i.e., \code{dim(y)[1]}. If a given
+covariate varies across primary sampling periods, then that list element
+should be a site by primary sampling period data.frame or matrix (i.e.,
+dimensons \code{dim(y)[1]} by \code{dim(y)[2]}. If a given
+covariate varies across primary and secondary sampling periods, then that
+list element should be a matrix or data.frame that is nsite rows with a number
+of columns equal to the product of the number of primary and secondary sampling
+periods (i.e., \code{dim(y)[1]} by \code{prod(dim(y)[2:3])}. Thus, each
+primary sampling period has a number of columns equal to the number of
+secondary sampling periods. See details for additional information.}
 
 \item{occ_covs}{Either a data.frame or named list of occupancy covariates. If
 there are temporally varying covariates, use a list. If there are no temporally
-varying covariates, use a data.frame. See details for additional infomration
-for how to format this.}
+varying covariates, use a data.frame. If a given covariate
+does not vary temporally, then that list element can be a vector of length nsite (i.e., \code{dim(y)[1]}. If a given
+covariate varies across primary sampling periods, then that list element
+should be a site by primary sampling period data.frame or matrix (i.e.,
+dimensons \code{dim(y)[1]} by \code{dim(y)[2]}.}
 
-\item{method}{The optimization method used by \code{\link[stats]{optim}}.}
+\item{method}{The optimization method used by \code{\link[stats]{optim}}. Defaults
+to \code{BFGS}.}
 
 \item{level}{The confidence interval size to be calculated for model parameters.
 Defaults to 0.95.}
@@ -103,8 +116,8 @@ Note that in this example detection probability only varied by sites, but this
 level of the model can incorporate covariates that vary be site, time period, or
 observation.
 
-Just like with a dynamic occupancy model, estimates of site occupancy
-is a derived parameter, and is most easily handled with using
+Just like with a dynamic occupancy model,  site occupancy estimates
+are derived parameters, and are most easily handled with using
 \code{predict()}. Nevertheless, calculating expected occupancy
 can be done with the following equation:
 
@@ -119,4 +132,54 @@ can be done with the following equation:
 Keeping in mind that your covariate structure may vary (here there
 is simply variation by sites). Again, \code{predict()} can easily
 handle this for you.
+}
+\examples{
+\dontrun{
+# fitting an intercept only model
+data("opossum_det_hist")
+
+# create y array
+opossum_y <- autoOcc::format_y(
+  x = opossum_det_hist,
+  site_column = "Site",
+  time_column = "Season",
+  history_columns = "^Week", # regex for starts with Week
+  report = FALSE # defaults to TRUE, turned off for example
+)
+
+# fit the model
+m1 <- autoOcc::auto_occ(
+  formula = ~1 ~1,
+  y = opossum_y
+)
+
+# Now bring in some covariate data
+
+data("opossum_covariates")
+oc <- opossum_covariates
+
+# scale the covariates (with base R)
+oc_scaled <- as.data.frame(
+  lapply(
+    oc,
+    function(x){
+      if(is.numeric(x)){
+        scale(x)
+      }else{
+        x
+      }
+    }
+  )
+)
+
+# And fit a single model with covariates that vary spatially
+
+m2 <- autoOcc::auto_occ(
+  formula = ~Impervious ~Impervious,
+  y = opossum_y,
+  det_covs = oc_scaled,
+  occ_covs = oc_scaled
+)
+}
+
 }

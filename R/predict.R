@@ -43,7 +43,10 @@
 #' \code{\link[mvtnorm]{rmvnorm}} to generate parameter estimates from
 #' multivariate distribution with a mean vector equal to the model parameters
 #' and a variance covariance matrix supplied by the \code{\link[autoOcc]{auto_occ}}
-#' model. For occupancy, each set of simulated parameters is used to
+#' model. This method was chosen as it creates functionally similar uncertainty
+#' estimates as a Bayesian autologistic occupancy model.
+#'
+#' For occupancy, each set of simulated parameters is used to
 #' generate two logit-linear predictions for the supplied covariates:
 #'
 #' \deqn{\Large \mathrm{logit}(\psi_a) = \beta_0 + \beta_1 \times x_1 + \dots + \beta_n \times x_n}
@@ -54,7 +57,7 @@
 #'
 #' where \eqn{\theta} is the estimated autologistic term. Following this, the expected occupancy of an autologisitic occupancy model is
 #'
-#' \deqn{\Large
+#' \deqn{\huge
 #'  \frac{
 #'    \mathrm{ilogit}(\psi_a)
 #'  }{
@@ -63,32 +66,42 @@
 #'}
 #' which is similar to the expected occupancy of a dynamic occupancy model (\eqn{\gamma \div (\gamma + \epsilon)})
 #' where \eqn{\gamma} is colonization and \eqn{\epsilon} is extinction. Following this calculation for all simuated
-#' parameter estimates and covariate values, the median estimate and confidence intervals are collected.
+#' parameter estimates and covariate values, the median estimate and confidence intervals are collected across
+#' simulations for each covariate value.
 #'
 #' Detection predictions are more straight-forward given there is no need to
-#' derive the expected value.
+#' derive the expected value. Simulations are still carried out to create to
+#' generate a vector of values for each parameter.
 #'
-#' If \code{newdata} is supplied, then  data.frame will be returned that has the
+#' If \code{newdata} is supplied, then  a \code{data.frame} will be returned that has the
 #' same number of rows as \code{newdata} with three columns: \code{estimate},
-#' \code{lower}, and \code{upper}. If \code{newdata} is not supplied, then the output will
-#' depend on the covariates the model was fitted with:
+#' \code{lower}, and \code{upper}. \code{estimate} is the median estimate, \code{lower} is the lower
+#' confidence level, \code{upper} is the upper confidence level.
 #'
-#' 1. For occupancy with no temporal variation in covariates, a data.frame will be returned
+#'  If \code{newdata} is not supplied, then the output will
+#' depend on the covariates the model was fitted with:
+#'\itemize{
+#'  \item{For occupancy with no temporal variation in covariates}{
+#'    a data.frame will be returned
 #'    that lines up with the covariates provided when the occupancy model was fit.
-#' 2. For occupancy with temporal variation across primary sampling periods, a list of data frames will
+#'  }
+#'  \item{For occupancy with temporal variation across primary sampling periods}{
+#'    a list of data frames will
 #'    be returned, one for each primary sampling period.
-#' 3. For detection with no temporal variation in covariates, a data.frame will be returned
+#'  }
+#'  \item{For detection with no temporal variation in covariates}{
+#'    a data.frame will be returned
 #'    that lines up with the covariates provided when the occupancy model was fit.
-#' 4. For detection with temporal variation across primary sampling periods, a list of data frames will
-#'    be returned, one for each primary period.
-#' 5. For detection with temporal varaition across secondary observation periods, a nested
-#'    list of data.frames will be returned, one for each primary and secondary sampling period. This
+#'  }
+#'  \item{For detection with temporal variation across primary sampling periods}{
+#'    a list of data frames will be returned, one for each primary period.
+#'  }
+#'  \item{For detection with temporal varaition across secondary observation periods}{
+#'    a nested list of data.frames will be returned, one for each primary and secondary sampling period. This
 #'    make time a substantial amount of time to do these calculations, and therefore it is not
 #'    recommended (i.e., use \code{newdata} instead).
-#' estimates are
-#' made for each time period for occupancy (resulting in a list of dataframes, one for each time period) or
-#' for each time and secondary observation period for detection (resulting in a
-#' nested list of data.frames).
+#'  }
+#'}
 #'
 
 setMethod(

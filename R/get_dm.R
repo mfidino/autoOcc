@@ -1,3 +1,4 @@
+#'
 #' Generate design matrix for fitting autologistic occuapncy models (internal).
 #'
 #' @param x the occupancy or detection list / data.frame.
@@ -13,13 +14,16 @@
 #' a 1, otherwise it is 0. If sampling did not occur for a given sampling period, those
 #' elements should be NA.
 #'
+#' @param to_drop which row indexes need to be dropped from the analysis,
+#' based on sites that do not have any data.
+#'
 #' @importFrom stats model.frame
 #' @importFrom stats model.matrix
 #'
 #' @noRd
 
 
-get_dm <- function(x, my_formula, type = c("psi","rho"), y){
+get_dm <- function(x, my_formula, type = c("psi","rho"), y, to_drop = NULL){
   # if just a site by nparam matrix for psi
   nsite <- dim(y)[1]
   nseason <- dim(y)[2]
@@ -29,6 +33,10 @@ get_dm <- function(x, my_formula, type = c("psi","rho"), y){
     is.data.frame(x) &
     type == "psi"
   ){
+    if(length(to_drop)>0){
+      x <- x[-to_drop, ,drop = FALSE]
+    }
+
     to_return <- vector(
       "list",
       length = nseason
@@ -46,7 +54,6 @@ get_dm <- function(x, my_formula, type = c("psi","rho"), y){
       to_return[[i]] <- tmp
     }
     return(to_return)
-    temp_var_psi <- FALSE
   }
   # if temporally varying psi
   if(
@@ -54,6 +61,19 @@ get_dm <- function(x, my_formula, type = c("psi","rho"), y){
     !is.data.frame(x) &
     type == "psi"
   ){
+    if(length(to_drop)>0){
+      x <- lapply(
+        x,
+        function(k){
+          if(length(ncol(k)) == 0){
+            k[-to_drop]
+          }else{
+            k[-to_drop, , drop = FALSE]
+          }
+        }
+      )
+    }
+
     to_return <- vector("list", length = nseason)
     for(i in 1:nseason){
       to_return[[i]] <- lapply(
@@ -83,11 +103,22 @@ get_dm <- function(x, my_formula, type = c("psi","rho"), y){
       )
       return(to_return)
     }
-    temp_var_psi <- TRUE
   }
   if(
     type == "rho"
   ){
+    if(length(to_drop)>0){
+      x <- lapply(
+        x,
+        function(k){
+          if(is.null(ncol(k))){
+            k[-to_drop]
+          }else{
+            k[-to_drop,]
+          }
+        }
+      )
+    }
     #quick checks, give -1 if no temporal variation
     ncols <- sapply(
         x,

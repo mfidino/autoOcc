@@ -1,7 +1,7 @@
 #' @title Get variance covariance matrix from autologistic occupancy model.
 #'
 #' @description Given a \code{"auto_occ_fit"} model. Derive the variance /
-#' covariance matrix for either occupancy (\code{"psi}) or detection (\code{"rho}).
+#' covariance matrix for either occupancy (\code{"psi"}) or detection (\code{"rho"}).
 #' @rdname vcov-methods
 #'
 #' @method vcov auto_occ_fit

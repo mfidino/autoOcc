@@ -37,5 +37,8 @@ elements should be NA.}
 \item{\code{detcovs}}{A list of the detection covariates supplied to \code{auto_occ}.}
 
 \item{\code{occcovs}}{A list of the occupancy covariates supplied to \code{auto_occ}.}
+
+\item{\code{sites_removed}}{An optional vector that denotes which row indices in y had
+no data across all sampled seasons.}
 }}
 

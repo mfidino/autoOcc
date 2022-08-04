@@ -2,9 +2,12 @@
 
 export(auto_occ)
 export(compare_models)
+export(format_y)
 exportClasses(auto_occ_fit)
+exportClasses(summary.auto_occ_fit)
 exportMethods(confint)
 exportMethods(predict)
+exportMethods(summary)
 exportMethods(vcov)
 importFrom(methods,new)
 importFrom(methods,show)

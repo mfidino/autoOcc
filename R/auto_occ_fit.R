@@ -1,6 +1,7 @@
 setClassUnion("dataframe_or_list", c("data.frame", "list"))
+setClassUnion("numeric_or_null", c("numeric", "NULL"))
 
-#' An S4 class to represent the fitted autologistic occupancy model
+#' @title An S4 class to represent the fitted autologistic occupancy model
 #
 #' @slot fitType The class of the fitted model object.
 #' @slot call The formula call.
@@ -19,6 +20,8 @@ setClassUnion("dataframe_or_list", c("data.frame", "list"))
 #' @slot nllFun the likelihood function supplied to \code{\link[stats]{optim}}.
 #' @slot detcovs A list of the detection covariates supplied to \code{auto_occ}.
 #' @slot occcovs A list of the occupancy covariates supplied to \code{auto_occ}.
+#' @slot sites_removed An optional vector that denotes which row indices in y had
+#' no data across all sampled seasons.
 #' @export
 #' @rdname auto_occ_fit
 
@@ -35,23 +38,53 @@ setClass("auto_occ_fit",
                         negLogLike = "numeric",
                         nllFun = "function",
                         detcovs = "list",
-                        occcovs = "dataframe_or_list"))
+                        occcovs = "dataframe_or_list",
+                        sites_removed = "numeric_or_null"))
 
 # constructor for auto_occ_fit objects
 auto_occ_fit <- function(fitType, call, formula, y,
                         estimates, AIC, opt, negLogLike, nllFun,
-                        detcovs, occcovs)
-{
-  aofit <- new("auto_occ_fit", fitType = fitType, call = call,
-               formula = formula, y = y,
-               estimates = estimates, AIC = AIC, opt = opt,
-               negLogLike = negLogLike,
-               nllFun = nllFun,
-               detcovs = detcovs, occcovs = occcovs)
+                        detcovs, occcovs, sites_removed){
+  aofit <- new(
+    "auto_occ_fit",
+    fitType = fitType,
+    call = call,
+    formula = formula,
+    y = y,
+    estimates = estimates,
+    AIC = AIC,
+    opt = opt,
+    negLogLike = negLogLike,
+    nllFun = nllFun,
+    detcovs = detcovs,
+    occcovs = occcovs,
+    sites_removed = sites_removed
+  )
   return(aofit)
 }
 
 
+#' @title Summarizing autologistic occupancy models
+#'
+#' @rdname summary-methods
+#'
+#' @docType methods
+#'
+#' @method summary auto_occ_fit
+#'
+#' @description summary method for class \code{"auto_occ_fit"}
+#'
+#' @param object Object of class inheriting from \code{"auto_occ_fit"}.
+#'
+#'
+#' @aliases summary,auto_occ_fit-method
+#'
+#' @returns
+#' \code{summary} returns an object of class \code{"summary.auto_occ_fit"}.
+#' See \code{\linkS4class{summary.auto_occ_fit}} for additional
+#' details.
+#'
+#' @export
 
 setMethod("summary", "auto_occ_fit", function(object)
 {
@@ -59,14 +92,30 @@ setMethod("summary", "auto_occ_fit", function(object)
   print(object@call)
   cat("\n")
   summaryOut <- summary(object@estimates)
-  cat("AIC:", object@AIC,"\n")
   cat("\noptim convergence code:", object@opt$convergence)
   cat("\noptim iterations:", object@opt$counts[1], "\n")
   if(!identical(object@opt$convergence, 0L))
     warning("Model did not converge. Try providing starting values or increasing maxit control argment.")
   invisible(summaryOut)
-  cat("\nParameter estimates:\n\n")
-  print(object@estimates)
+  psis <- object@estimates[grep("^psi - ", object@estimates$parameter),]
+  cat("\nOccupancy estimates:\n\n")
+  print(psis, digits = 3)
+  cat("\nNote: psi - theta is the autologistic term\n")
+  rhos <- object@estimates[grep("^rho - ", object@estimates$parameter),]
+  cat("\nDetection estimates:\n\n")
+  print(rhos, digits = 3)
+  cat("\n")
+  cat("AIC:", object@AIC,"\n")
+  to_return <- new(
+    "summary.auto_occ_fit",
+    call = object@call,
+    optim_convergence_code = object@opt$convergence,
+    optim_iterations = object@opt$counts[1],
+    psi = psis,
+    rho = rhos,
+    AIC = object@AIC
+  )
+  invisible(to_return)
 })
 
 

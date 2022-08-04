@@ -17,5 +17,5 @@ If type is not supplied, provide entire variance covariance matrix.}
 }
 \description{
 Given a \code{"auto_occ_fit"} model. Derive the variance /
-covariance matrix for either occupancy (\code{"psi}) or detection (\code{"rho}).
+covariance matrix for either occupancy (\code{"psi"}) or detection (\code{"rho"}).
 }

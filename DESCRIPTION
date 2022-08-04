@@ -7,6 +7,10 @@ Maintainer: Mason Fidino <mfidino@lpzoo.org>
 Description: Fits autologistic occupancy models, compares sets of models, and generates model predictions.
 License: MIT + file LICENSE
 Encoding: UTF-8
-Depends: methods, stats, mvtnorm
+Depends: 
+    methods,
+    stats,
+    mvtnorm,
+    R (>= 2.10)
 LazyData: true
 RoxygenNote: 7.2.0

@@ -10,21 +10,34 @@
 #' detection (rho) and occupancy (psi) in that order.
 #'
 #' @param y A three-dimensional array of species detections. The first dimension
-#' is sites, the second dimension denotes primary sampling periods, and the third
-#' dimension denotes the secondary sampling periods within each primary sampling
+#' is sites, the second dimension is primary sampling periods, and the third
+#' dimension is the secondary sampling periods within each primary sampling
 #' period. If the species was detected on a given survey, that element would receive
 #' a 1, otherwise it is 0. If sampling did not occur for a given sampling period, those
 #' elements should be NA.
 #'
-#' @param det_covs A named list of detection covariates. See details for additional
-#'   information on how to format this list.
+#' @param det_covs A named list of detection covariates. If a given covariate
+#' does not vary temporally, then that list element can be a vector of length nsite (i.e., \code{dim(y)[1]}. If a given
+#' covariate varies across primary sampling periods, then that list element
+#' should be a site by primary sampling period data.frame or matrix (i.e.,
+#' dimensons \code{dim(y)[1]} by \code{dim(y)[2]}. If a given
+#' covariate varies across primary and secondary sampling periods, then that
+#' list element should be a matrix or data.frame that is nsite rows with a number
+#' of columns equal to the product of the number of primary and secondary sampling
+#' periods (i.e., \code{dim(y)[1]} by \code{prod(dim(y)[2:3])}. Thus, each
+#' primary sampling period has a number of columns equal to the number of
+#' secondary sampling periods. See details for additional information.
 #'
 #' @param occ_covs Either a data.frame or named list of occupancy covariates. If
 #' there are temporally varying covariates, use a list. If there are no temporally
-#' varying covariates, use a data.frame. See details for additional infomration
-#' for how to format this.
+#' varying covariates, use a data.frame. If a given covariate
+#' does not vary temporally, then that list element can be a vector of length nsite (i.e., \code{dim(y)[1]}. If a given
+#' covariate varies across primary sampling periods, then that list element
+#' should be a site by primary sampling period data.frame or matrix (i.e.,
+#' dimensons \code{dim(y)[1]} by \code{dim(y)[2]}.
 #'
-#' @param method The optimization method used by \code{\link[stats]{optim}}.
+#' @param method The optimization method used by \code{\link[stats]{optim}}. Defaults
+#' to \code{BFGS}.
 #'
 #' @param level The confidence interval size to be calculated for model parameters.
 #'   Defaults to 0.95.
@@ -89,8 +102,8 @@
 #' level of the model can incorporate covariates that vary be site, time period, or
 #' observation.
 #'
-#' Just like with a dynamic occupancy model, estimates of site occupancy
-#' is a derived parameter, and is most easily handled with using
+#' Just like with a dynamic occupancy model,  site occupancy estimates
+#' are derived parameters, and are most easily handled with using
 #' \code{predict()}. Nevertheless, calculating expected occupancy
 #' can be done with the following equation:
 #'
@@ -111,6 +124,56 @@
 #' @importFrom stats optim
 #' @importFrom stats qnorm
 #' @importFrom methods new
+#'
+#' @examples
+#' \dontrun{
+#' # fitting an intercept only model
+#' data("opossum_det_hist")
+#'
+#' # create y array
+#' opossum_y <- autoOcc::format_y(
+#'   x = opossum_det_hist,
+#'   site_column = "Site",
+#'   time_column = "Season",
+#'   history_columns = "^Week", # regex for starts with Week
+#'   report = FALSE # defaults to TRUE, turned off for example
+#' )
+#'
+#' # fit the model
+#' m1 <- autoOcc::auto_occ(
+#'   formula = ~1 ~1,
+#'   y = opossum_y
+#' )
+#'
+#' # Now bring in some covariate data
+#'
+#' data("opossum_covariates")
+#' oc <- opossum_covariates
+#'
+#' # scale the covariates (with base R)
+#' oc_scaled <- as.data.frame(
+#'   lapply(
+#'     oc,
+#'     function(x){
+#'       if(is.numeric(x)){
+#'         scale(x)
+#'       }else{
+#'         x
+#'       }
+#'     }
+#'   )
+#' )
+#'
+#' # And fit a single model with covariates that vary spatially
+#'
+#' m2 <- autoOcc::auto_occ(
+#'   formula = ~Impervious ~Impervious,
+#'   y = opossum_y,
+#'   det_covs = oc_scaled,
+#'   occ_covs = oc_scaled
+#' )
+#' }
+#'
 
 auto_occ <- function(formula, y, det_covs = NULL, occ_covs = NULL,
                      method = "BFGS", level = 0.95,...){
@@ -124,6 +187,26 @@ auto_occ <- function(formula, y, det_covs = NULL, occ_covs = NULL,
   rho_formula <- as.formula(char[[2]])
   psi_formula <- as.formula(paste("~", char[[3]]))
 
+  # check to see if any sites need to get dropped
+  na_count <- apply(
+    is.na(y),
+    1, sum
+  )
+  to_go <- which(
+    na_count == prod(dim(y)[2:3])
+  )
+  if(length(to_go) > 0){
+    cat(
+      "\nSome sites have no data.\nRemoved sites at rows: ",
+      ifelse(
+        length(to_go) == 1,
+          to_go,
+          paste0(to_go, collapse = ", ")
+      )
+    )
+    y <- y[-to_go,,]
+  }
+
   # get sites, seasons, and reps from y array
   nsite <- dim(y)[1]
   nseason <- dim(y)[2]
@@ -131,13 +214,14 @@ auto_occ <- function(formula, y, det_covs = NULL, occ_covs = NULL,
 
   # get the design matrices together
   if(is.null(occ_covs)){
-    occ_covs <- data.frame(intercept = rep(1, nsite))
+    occ_covs <- data.frame(intercept = rep(1, nsite + length(to_go)))
   }
   occ_dm <- get_dm(
-    occ_covs,
-    psi_formula,
-    "psi",
-    y=y
+    x = occ_covs,
+    my_formula = psi_formula,
+    type = "psi",
+    y=y,
+    to_drop = to_go
   )
 
   if(is.null(det_covs)){
@@ -146,12 +230,18 @@ auto_occ <- function(formula, y, det_covs = NULL, occ_covs = NULL,
         matrix(
           1,
           ncol = nseason,
-          nrow = nsite
+          nrow = nsite + length(to_go)
         )
       )
     )
   }
-  rho_dm <- get_dm(det_covs, rho_formula, "rho", y=y)
+  rho_dm <- get_dm(
+    det_covs,
+    rho_formula,
+    "rho",
+    y=y,
+    to_drop = to_go
+  )
 
   # and the number of parameters
 
@@ -168,7 +258,6 @@ auto_occ <- function(formula, y, det_covs = NULL, occ_covs = NULL,
     psi = occ_dm,
     rho = rho_dm
   )
-
 
   initial_parms <- rep(0, nparms)
   fit <- optim(
@@ -200,7 +289,9 @@ auto_occ <- function(formula, y, det_covs = NULL, occ_covs = NULL,
   )
   aic <- 2 * fit$value + 2 * nparms
 
-
+  if(length(to_go) == 0){
+    to_go <- NULL
+  }
   to_return <- new(
     "auto_occ_fit",
     fitType = "auto_occ_fit",
@@ -213,7 +304,8 @@ auto_occ <- function(formula, y, det_covs = NULL, occ_covs = NULL,
     negLogLike = fit$value,
     nllFun = negloglik,
     detcovs = det_covs,
-    occcovs = occ_covs
+    occcovs = occ_covs,
+    sites_removed = to_go
   )
   return(to_return)
 

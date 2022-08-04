@@ -1,32 +1,22 @@
-
-all_funcs <- list.files(
-  "./R/",
-  full.names = TRUE
-)
-all_funcs <- all_funcs[-grep("bayes|boot", all_funcs)]
-
-sapply(
-  all_funcs,
-  source
-)
-
-
 # General bookkeeping
 nsite <- 25
 nyear <- 8
-ncovar <- 3
+ncovar <- 2
 nrepeats <- 5
 
 # for covariates
 X <- matrix(
   NA,
   ncol = ncovar,
-  nrow = nsite
+  nrow = nsite * nyear
 )
+
+
+
 
 set.seed(333)
 # Create covariates
-X <- cbind(1,apply(X, 2, function(x) rnorm(nsite)))
+X <- cbind(1,apply(X, 2, function(x) rnorm(nsite * nyear)))
 
 # Occupancy coefficients, +1 for intercept
 psi_betas <- rnorm(ncovar + 1)
@@ -82,7 +72,7 @@ data_list <- list(
 )
 
 
-mout <- run.jags("./R/bayes_ao.R",
+mout <- run.jags("./JAGS/bayes_ao.R",
                  data = data_list,
                  monitor = c("beta","theta","alpha"),
                  n.chains = 4,
@@ -102,8 +92,7 @@ oc1 <- data.frame(
 my_det <- list(
   x1 = oc1$x1,
   x2 = oc1$x2,
-  x3 = data.frame(matrix(rep(1:8, each = nsite * nrep),
-              nrow = nsite, ncol = nseason*nrep))
+  x3 = oc1$x3
 )
 m2 <- auto_occ(
   formula = ~x1+x2+x3 ~x1+x2+x3 ,
@@ -246,3 +235,125 @@ lines(mcmc_est[,3] ~ pdat$x1, lty = 2, lwd = 2)
 plot(model_predict$estimate ~ pdat$x1, type = "l", ylim = c(0,1))
 lines(model_predict$lower ~ pdat$x1, lty = 2, lwd = 2)
 lines(model_predict$upper ~ pdat$x1, lty = 2, lwd = 2)
+
+
+# use the data examples
+data("opossum_det_hist")
+data("opossum_covariates")
+odh <- opossum_det_hist
+oc <- opossum_covariates
+
+# function to generate detection history
+opossum_y <- autoOcc::format_y(
+  x = odh,
+  site_column = "Site",
+  time_column = "Season",
+  history_columns = "^Week" # start with Week
+)
+
+# scale the covariates (with base R)
+oc_scaled <- as.data.frame(
+  lapply(
+    oc,
+    function(x){
+      if(is.numeric(x)){
+        scale(x)
+      }else{
+        x
+      }
+    }
+  )
+)
+# we are using the same covariates for detection and occupancy
+#  so we can use the same data.frame.
+m1 <- autoOcc::auto_occ(
+  ~Impervious + Income ~ Impervious + Income,
+  y = opossum_y,
+  det_covs = oc_scaled,
+  occ_covs = oc_scaled
+)
+
+m2 <- autoOcc::auto_occ(
+  ~Impervious  ~ Impervious,
+  y = opossum_y,
+  det_covs = oc_scaled,
+  occ_covs = oc_scaled
+)
+
+m3 <- autoOcc::auto_occ(
+  ~Income  ~ Income,
+  y = opossum_y,
+  det_covs = oc_scaled,
+  occ_covs = oc_scaled
+)
+
+# intercept only model
+m4 <- autoOcc::auto_occ(
+  ~1~1,
+  y = opossum_y
+)
+
+my_results <- autoOcc::compare_models(
+  list(m1,m2,m3,m4),
+  TRUE,
+  digits = 2
+)
+
+# global model is the best, look at change in occupancy.
+# first make the prediction data.frame with a realistic
+# range based on the actual data and not the scaled data.
+imperv_real <- data.frame(
+  Impervious = seq(20,80,0.5),
+  Income = 0
+)
+
+# then create the scaled data.frame and use that for predictions
+imperv <- imperv_real
+imperv$Impervious <- (
+  imperv$Impervious - mean(oc$Impervious)
+  ) / sd(oc$Impervious)
+
+# the model prediction
+opo_imperv <- autoOcc::predict(m1, "psi", imperv)
+
+windows(9,4)
+par(mfrow = c(1,2))
+plot(
+  opo_imperv$estimate ~ imperv_real$Impervious,
+  bty = "l",
+  type = "l",
+  las = 1,
+  ylab = "Occupancy",
+  xlab= "Impervious Cover",
+  ylim = c(0,1),
+  lwd = 3
+)
+lines(opo_imperv$lower ~ imperv_real$Impervious, lwd = 2, lty = 2)
+lines(opo_imperv$upper ~ imperv_real$Impervious, lwd = 2, lty = 2)
+
+
+# do the same thing with income
+income_real <- data.frame(
+  Impervious = 0,
+  Income = seq(40000, 160000, by = 500)
+)
+
+income <- income_real
+income$Income <- (income$Income - mean(oc$Income)) / sd(oc$Income)
+
+opo_income <- autoOcc::predict(m1, "psi", income)
+
+plot(
+  opo_income$estimate ~ income_real$Income,
+  bty = "l",
+  type = "l",
+  las = 1,
+  ylab = "Occupancy",
+  xlab= "Per Capita Income (US Dollar)",
+  ylim = c(0,1),
+  lwd = 3
+)
+lines(opo_income$lower ~ income_real$Income, lwd = 2, lty = 2)
+lines(opo_income$upper ~ income_real$Income, lwd = 2, lty = 2)
+
+
