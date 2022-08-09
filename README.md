@@ -17,7 +17,7 @@
 
 This package is in active development. I'll likely just add in new functions
 when I locate some pain points while working with it. That said, the current
-functions are stable and tested.
+functions are stable.
 
 ## Installation
 
