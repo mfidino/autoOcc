@@ -66,8 +66,8 @@ The suggested workflow is:
 3. Run `devtools::install()` to install the new version of the package.
 4. Run `devtools::test()` to run the test scripts on the new version of the package.
 
-If you are also prepping the package as a whole, then you will also want to run `devtools::check()` and/or `devtools::check_cran()` to make sure that the package is complete (though note that `devtools::check()` is evaluated with any merge to the main branch).
-Note that you need an up-to-date TeX/LaTeX distribution for running `devtools::check()` and/or `devtools::check_cran()` due to the rendering of the package manual.
+If you are also prepping the package as a whole, then you will also want to run `devtools::check()` to make sure that the package is complete (though note that `devtools::check()` is evaluated with any merge to the main branch).
+Note that you need an up-to-date TeX/LaTeX distribution for running `devtools::check()` due to the rendering of the package manual.
 
 For more info, see the [GitHub repo](https://github.com/hadley/devtools) for the `devtools` package. 
 
