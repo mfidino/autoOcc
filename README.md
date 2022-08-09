@@ -1,5 +1,11 @@
 <img src="man/figures/hex.png" alt="hexagon software logo, light purple background with darker purple outline. At the top in computer type font it says 'autoOcc' while below it in math lettering is z_t | z_{t-1}" width="200px" align="right">
 
+
+<!-- badges: start -->
+[![Codecov test coverage](https://codecov.io/gh/mfidino/autoOcc/branch/main/graph/badge.svg)](https://codecov.io/gh/mfidino/autoOcc?branch=main)
+[![R build status](https://github.com/mfidino/autoOcc/workflows/R-CMD-check/badge.svg)](https://github.com/mfidino/autoOcc/actions)
+<!-- badges: end -->
+
 # autoOcc 0.1.0
  
 `autoOcc` is an R package to fit an autologistic occupancy model, which is a simplified version of a dynamic occupancy model that is espcially useful when dealing with smaller datasets. `autoOcc` fits this model hierarchically so that different covariates can be used on a species latent occupancy and detection probability. Most of the functions here behave similarly to those in `unmarked`, so using `autoOcc` should be somewhat familar to those who have experience with that R package.
