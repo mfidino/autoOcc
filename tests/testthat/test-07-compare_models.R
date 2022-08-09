@@ -80,6 +80,12 @@ test_that(
     expect_silent(
       compare_models(list(m1, m2, m3, m4))
     )
+    expect_silent(
+      compare_models(list(m1, m2, m3, m4), digits = 2)
+    )
+    expect_silent(
+      compare_models(list(m1, m2, m3, m4), add_formula = TRUE)
+    )
     expect_true(
       all(
         compare_models(list(m1, m2, m3, m4))$model == c("m3", "m4", "m2","m1")
@@ -138,7 +144,7 @@ test_that(
     m5 <- suppressWarnings(
       auto_occ(
         ~1~1,
-        y = opossum_y[1:20,,]
+        y = opossum_y[1:10,,]
       )
     )
     expect_error(
@@ -157,6 +163,16 @@ test_that(
     expect_error(
       compare_models(
         list(m6, m2,m3)
+      )
+    )
+    expect_error(
+      compare_models(
+        list(m6, m2,"cat")
+      )
+    )
+    expect_error(
+      compare_models(
+        m1
       )
     )
 

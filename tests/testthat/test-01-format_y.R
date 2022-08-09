@@ -61,6 +61,39 @@ test_that(
         history_columns = 3
       )
     )
+    expect_output(
+     ay <-  f(
+        x = opossum_det_hist,
+        site_column = 1,
+        time_column = 2,
+        history_columns = 3:6,
+        report = TRUE
+      )
+    )
+    opo <- opossum_det_hist
+    opo$Season <- factor(
+      opo$Season,
+      levels = unique(opo$Season)
+    )
+    expect_output(
+      ay <-  f(
+        x = opo,
+        site_column = 1,
+        time_column = 2,
+        history_columns = 3:6,
+        report = TRUE
+      )
+    )
+    opo$Season <- as.numeric(opo$Season)
+    expect_output(
+      ay <-  f(
+        x = opo,
+        site_column = 1,
+        time_column = 2,
+        history_columns = 3:6,
+        report = TRUE
+      )
+    )
     # way more locations then needed
     expect_error(
       f(
@@ -87,7 +120,7 @@ test_that(
         x = my_data,
         site_column = 1,
         time_column = 2,
-        history_columns = "Site|Week"
+        history_columns = "Week"
       )
     )
     # site column identifier cant be a factor

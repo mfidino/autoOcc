@@ -186,18 +186,14 @@ compare_models <- function(
       as.vector(x@y)
     }
   )
-  my_y <- suppressWarnings(
-    try(
-      do.call(
-        "cbind",
-        my_y
-      ),
-      silent = TRUE
-    )
-  )
-  if(inherits(my_y,"try-error")){
+  y_length <- length(unique(sapply(my_y, length)))
+  if(y_length > 1){
     stop("y array has different dimensions among models")
   }
+  my_y <- do.call(
+        "cbind",
+        my_y
+      )
   my_y <- apply(
     my_y,
     1,

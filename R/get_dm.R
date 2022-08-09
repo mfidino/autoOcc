@@ -79,6 +79,32 @@ get_dm <- function(x, my_formula, type = c("psi","rho"), y, to_drop = NULL){
     !is.data.frame(x) &
     type == "psi"
   ){
+    # check if there is any temporal variation, and if so
+    #  it has the correct number of columns.
+    ncols <- sapply(
+      x,
+      function(k){
+        cc <- ncol(k)
+        ifelse(is.null(cc), -1, cc)
+      }
+    )
+
+    for(i in 1:length(ncols)){
+      ncols[[i]] <- ncols[[i]] == -1 |
+        ncols[[i]] == nseason
+    }
+    if(sum(ncols) != length(x)){
+      baddies <- which(ncols!=1)
+      error_report <- paste0(
+        "Occupancy covariates must either be a vector,\n",
+        "or a matrix/data.frame with a number of columns equal to the\n",
+        "number of primary sampling periods.",
+        "These covariates are not properly\n",
+        "set up: ", paste0(names(x)[baddies] , collapse = ", ")
+      )
+      stop(error_report)
+    }
+
     if(length(to_drop)>0){
       x <- lapply(
         x,
@@ -260,9 +286,6 @@ get_dm <- function(x, my_formula, type = c("psi","rho"), y, to_drop = NULL){
 #' @noRd
 
 factor_df_cols <- function(df, name=NULL, temp_var = FALSE, type = type){
-  if(is.null(df)){
-    return(NULL)
-  }
   stopifnot(
     inherits(
       df, "data.frame"

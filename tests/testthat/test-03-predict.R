@@ -48,6 +48,10 @@ test_that(
     expect_silent(
       predict(m1, type = "psi")
     )
+    # error because type not included
+    expect_error(
+      predict(m1)
+    )
     ndat <- data.frame(
       Impervious = seq(-3, 3, length.out = 20),
       Income = 0
