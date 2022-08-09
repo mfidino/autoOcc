@@ -56,6 +56,32 @@
 #'    }
 #'  }
 #'
+#' @examples
+#  load in data
+#' data("opossum_det_hist")
+#'
+#'
+#' # a quick look at the top six rows of this data.frame
+#' #  so that you can see the ordering of the data.
+#' #       Site Season Week_1 Week_2 Week_3 Week_4
+#' # 1 D02-BMT1   JA19     NA      0     NA      0
+#' # 2 D02-HUP0   JA19     NA      0      0      0
+#' # 3 D02-JBS1   JA19     NA      0      1      0
+#' # 4 D02-MDU1   JA19     NA     NA     NA     NA
+#' # 5 D02-MOP1   JA19     NA      0      0      0
+#' # 6 D02-RCP1   JA19     NA      0      1      1
+#' #
+#'
+#' opossum_y <- format_y(
+#'   x = opossum_det_hist,
+#'   site_column = "Site",
+#'   time_column = "Season",
+#'   history_columns = "^Week", # the detection history columns all start with the word Week
+#'   report = FALSE #only setting to FALSE for example, defaults to TRUE
+#' )
+#'
+#'
+#'
 #' @export
 
 format_y <- function(x, site_column, time_column, history_columns, report = TRUE){
@@ -147,8 +173,28 @@ format_y <- function(x, site_column, time_column, history_columns, report = TRUE
   # if character, do your regex
   if(is.character(history_columns)){
     history_columns <- grep(history_columns, colnames(x))
+    # check class of each column
+    history_classes <- sapply(
+      x[,history_columns],
+      class
+    )
+    if(any(!history_classes %in% c("numeric", "integer"))){
+      stop(
+        paste0(
+          "One of the columns identified by inputted value to 'history_columns'",
+          " was not a numeric or integer.",
+          "\n\nColumns queried: ", paste0(
+            names(history_classes),
+            collapse = ", "
+          )
+        )
+      )
+    }
   }
   history_columns <- colnames(x)[history_columns]
+  if(length(history_columns) == 1){
+    stop("Value input to 'history_columns' only returned a single column. Detection histories must have > 1 secondary sample.")
+  }
   if(report){
     cat("\n\nDETECTION HISTORIES\n-------------------\n\n")
     cat(
@@ -199,7 +245,7 @@ format_y <- function(x, site_column, time_column, history_columns, report = TRUE
     y[,i,] <- as.matrix(tmp_df[,history_columns])
   }
   # check to make sure there are only 0, 1, or NA present
-  y_vals <- unique(as.numeric(y))
+  y_vals <- suppressWarnings(unique(as.numeric(y)))
   if(any(!y_vals %in% c(NA, 0, 1))){
     stop("Elements of the y array must be either 0, 1, or NA. Check your detection history columns for elements that do not take those values.")
   }

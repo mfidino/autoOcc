@@ -6,13 +6,14 @@
 #' @slot psi The occupancy parameters in a data.frame
 #' @slot rho The detection parameters in a data.frame
 #' @slot AIC the AIC of the fitted model.
-#' @export
-#' @rdname summary.auto_occ_fit
 #'
+#' @name auto_occ_summary-class
+#' @rdname auto_occ_summary-class
+#' @export
 #'
 
 #' @importFrom methods new
-setClass("summary.auto_occ_fit",
+setClass("auto_occ_summary",
          representation(call = "call",
                         optim_convergence_code = "integer",
                         optim_iterations = "integer",
@@ -21,11 +22,11 @@ setClass("summary.auto_occ_fit",
                         AIC = "numeric"))
 
   # constructor for summary.auto_occ_fit
-  summary.auto_occ_fit <- function(call, optim_convergence_code,
+  auto_occ_summary <- function(call, optim_convergence_code,
                                    optim_iterations,
                                    psi,rho,AIC){
     my_summary <- new(
-      "summary.auto_occ_fit",
+      "auto_occ_summary",
       call = call,
       optim_convergence_code = optim_convergence_code,
       optim_iterations = optim_iterations,
@@ -38,7 +39,7 @@ setClass("summary.auto_occ_fit",
 
 #' @importFrom methods show
 #' @noRd
-  setMethod("show", "summary.auto_occ_fit", function(object)
+  setMethod("show", "auto_occ_summary", function(object)
   {
     cat("\nCall:\n")
     print(object@call)

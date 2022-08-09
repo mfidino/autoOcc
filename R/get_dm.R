@@ -28,7 +28,9 @@ get_dm <- function(x, my_formula, type = c("psi","rho"), y, to_drop = NULL){
   nsite <- dim(y)[1]
   nseason <- dim(y)[2]
   nrep <- dim(y)[3]
+
   # if psi does not temporally vary
+
   if(
     is.data.frame(x) &
     type == "psi"
@@ -36,16 +38,32 @@ get_dm <- function(x, my_formula, type = c("psi","rho"), y, to_drop = NULL){
     if(length(to_drop)>0){
       x <- x[-to_drop, ,drop = FALSE]
     }
+    x <- factor_df_cols(
+      x,
+      temp_var = FALSE,
+      type = type
+    )
 
     to_return <- vector(
       "list",
       length = nseason
     )
-    tmp <- model.frame(
-      formula = my_formula,
-      data = x,
-      na.action = NULL
+    tmp <- try(
+        model.frame(
+        formula = my_formula,
+        data = x,
+        na.action = NULL
+      ),
+      silent = TRUE
     )
+    if(inherits(tmp,"try-error")){
+      tmp <- gsub(
+        "not found\n",
+        "not found. This can happen if you did not input temporally varying covariates as a named list or if you left this covariate out of the covariates supplied to the 'occ_covs' argument of auto_occ().\n",
+        tmp
+      )
+      stop(tmp)
+    }
     tmp <- model.matrix(
       my_formula,
       tmp
@@ -73,14 +91,22 @@ get_dm <- function(x, my_formula, type = c("psi","rho"), y, to_drop = NULL){
         }
       )
     }
+    for(i in 1:length(x)){
+      x[[i]] <- factor_df_cols(
+        df = as.data.frame(x[[i]]),
+        name = names(x)[i],
+        temp_var = TRUE,
+        type = type
+      )
+    }
 
     to_return <- vector("list", length = nseason)
     for(i in 1:nseason){
       to_return[[i]] <- lapply(
         x,
         function(k){
-          if(ncol(k) == 1){
-            return(k[,1])
+          if(is.null(ncol(k))| ncol(k) == 1){
+            return(k)
           } else {
             return(k[,i])
           }
@@ -101,8 +127,8 @@ get_dm <- function(x, my_formula, type = c("psi","rho"), y, to_drop = NULL){
         my_formula,
         to_return[[i]]
       )
-      return(to_return)
     }
+    return(to_return)
   }
   if(
     type == "rho"
@@ -137,14 +163,23 @@ get_dm <- function(x, my_formula, type = c("psi","rho"), y, to_drop = NULL){
       baddies <- which(ncols!=1)
       error_report <- paste0(
         "Detection covariates must either be a vector,\n",
-        "a matrix with a number of columns equal to the\n",
-        "number of primary sampling periods, or a matrix with\n",
+        "a matrix/data.frame with a number of columns equal to the\n",
+        "number of primary sampling periods, or a matrix/data.frame with\n",
         "a number of columns equal to the number of primary\n",
         "sampling periods times the number of secondary observations\n",
         "within time periods. These covariates are not properly\n",
         "set up: ", paste0(names(x)[baddies] , collapse = ", ")
       )
       stop(error_report)
+    }
+    # create factors as needed
+    for(i in 1:length(x)){
+      x[[i]] <- factor_df_cols(
+        df = as.data.frame(x[[i]]),
+        name = names(x)[i],
+        temp_var = TRUE,
+        type = type
+      )
     }
 
     to_return <- vector("list", length = nseason)
@@ -163,7 +198,7 @@ get_dm <- function(x, my_formula, type = c("psi","rho"), y, to_drop = NULL){
           x,
           function(k){
             # if no temporal variation
-            if(is.null(ncol(k))){
+            if(is.null(ncol(k)) | ncol(k) == 1){
               return(k)
             }
             # if variation across each sampling period
@@ -180,12 +215,24 @@ get_dm <- function(x, my_formula, type = c("psi","rho"), y, to_drop = NULL){
           "cbind.data.frame",
           tmp
         )
+        colnames(tmp) <- names(x)
 
-        tmp <- model.frame(
-          formula = my_formula,
-          data = tmp,
-          na.action = NULL
+        tmp <- try(
+          model.frame(
+            formula = my_formula,
+            data = tmp,
+            na.action = NULL
+          ),
+          silent = TRUE
         )
+        if(inherits(tmp, "try-error")){
+          tmp <- gsub(
+            "not found\n",
+            "not found. This can happen if you did not input temporally varying covariates as a named list or if you left this covariate out of the covariates supplied to the 'rho_covs' argument of auto_occ().\n",
+            tmp
+          )
+          stop(tmp)
+        }
         tmp <- model.matrix(
           my_formula,
           tmp
@@ -195,4 +242,76 @@ get_dm <- function(x, my_formula, type = c("psi","rho"), y, to_drop = NULL){
     }
     return(to_return)
   }
+}
+
+
+
+#'
+#' Make data.frame columns into factors (internal). Mostly taken from unmarked.
+#'
+#' @param df The data.frame
+#'
+#' @param name the column name being converted
+#'
+#' @param temp_var whether or not the data.frame contains temporally varying covariates. Defaults to \code{FALSE}
+#'
+#' @param type Either 'psi' for occupancy or 'rho' for detection.
+#'
+#' @noRd
+
+factor_df_cols <- function(df, name=NULL, temp_var = FALSE, type = type){
+  if(is.null(df)){
+    return(NULL)
+  }
+  stopifnot(
+    inherits(
+      df, "data.frame"
+    )
+  )
+  char_cols <- sapply(
+    df,
+    is.character
+  )
+  dm <- ifelse(
+    type == "psi",
+    "occ_covs",
+    "det_covs"
+  )
+  if(any(char_cols)){
+    if(is.null(name)){
+      name <- names(char_cols)[char_cols]
+    }
+
+    warning(
+      paste0(
+        "\n",dm,": '",  name,
+        "' column is a character object. Converted it to a factor."
+      ),
+      call.=FALSE,
+      immediate. = TRUE
+    )
+  }
+  if(temp_var){
+    # If temporally varying we need unique categories across ALL columns
+    df_unq <- unique(
+      unlist(
+        df
+      )
+    )
+    to_change <- df[,char_cols, drop=FALSE]
+    df[,char_cols] <- lapply(
+      to_change,
+      function(x) factor(x, levels = df_unq)
+    )
+    return(df)
+  }
+  to_change <- df[,char_cols, drop=FALSE]
+  df[,char_cols] <- lapply(
+    to_change,
+    function(k){
+      my_lvl <- unique(k)
+      to_return <- factor(k, levels = my_lvl)
+    }
+  )
+  return(df)
 }

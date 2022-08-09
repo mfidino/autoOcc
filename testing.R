@@ -1,3 +1,4 @@
+library(autoOcc)
 # General bookkeeping
 nsite <- 25
 nyear <- 8
@@ -264,13 +265,47 @@ oc_scaled <- as.data.frame(
     }
   )
 )
+
+season_frame <- list(
+  season = matrix(
+    factor(odh$Season),
+    ncol = dim(opossum_y)[2],
+    nrow = dim(opossum_y)[1]
+  ),
+  Imperv = oc_scaled$Impervious
+)
+
+season_frame <- data.frame(season_frame$season)
+# season_frame$season <- data.frame(season_frame$season)
+# season_frame$season$X1 <- factor(
+#   season_frame$season$X1,
+#   levels = unique(odh$Season)
+# )
+# season_frame$season$X2 <- factor(
+#   season_frame$season$X2,
+#   levels = unique(odh$Season)
+# )
+# season_frame$season$X3 <- factor(
+#   season_frame$season$X3,
+#   levels = unique(odh$Season)
+# )
+# season_frame$season$X4 <- factor(
+#   season_frame$season$X4,
+#   levels = unique(odh$Season)
+# )
+
+sframedet <- list(
+  season = season_frame$season[,rep(1:4,each = 4)]
+)
+
+
 # we are using the same covariates for detection and occupancy
 #  so we can use the same data.frame.
 m1 <- autoOcc::auto_occ(
-  ~Impervious + Income ~ Impervious + Income,
+  formula = ~season ~ season,
   y = opossum_y,
-  det_covs = oc_scaled,
-  occ_covs = oc_scaled
+  det_covs = sframedet,
+  occ_covs = season_frame
 )
 
 m2 <- autoOcc::auto_occ(
@@ -314,7 +349,7 @@ imperv$Impervious <- (
   ) / sd(oc$Impervious)
 
 # the model prediction
-opo_imperv <- autoOcc::predict(m1, "psi", imperv)
+opo_imperv <- autoOcc:::predict.auto_occ(m1, "psi", imperv)
 
 windows(9,4)
 par(mfrow = c(1,2))

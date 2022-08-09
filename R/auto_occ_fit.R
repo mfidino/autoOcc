@@ -66,7 +66,7 @@ auto_occ_fit <- function(fitType, call, formula, y,
 
 #' @title Summarizing autologistic occupancy models
 #'
-#' @rdname summary-methods
+#' @rdname summary.auto_occ_fit
 #'
 #' @docType methods
 #'
@@ -76,17 +76,32 @@ auto_occ_fit <- function(fitType, call, formula, y,
 #'
 #' @param object Object of class inheriting from \code{"auto_occ_fit"}.
 #'
+#' @param ... Additional arguments. Not currently used.
 #'
-#' @aliases summary,auto_occ_fit-method
 #'
 #' @returns
-#' \code{summary} returns an object of class \code{"summary.auto_occ_fit"}.
-#' See \code{\linkS4class{summary.auto_occ_fit}} for additional
+#' \code{summary} returns an object of class \code{"auto_occ_summary"}.
+#' See \code{\linkS4class{auto_occ_summary}} for additional
 #' details.
+#'
+#' @examples
+#' data("opossum_det_hist")
+#' opossum_y <- format_y(
+#'   opossum_det_hist,
+#'   "Site",
+#'   "Season",
+#'   "^Week",
+#'   report = FALSE
+#' )
+#' # suppressing warnings as there are sites with 0 data
+#' m1 <- suppressWarnings(
+#'   auto_occ(~1~1, y = opossum_y)
+#' )
+#' summary(m1)
 #'
 #' @export
 
-setMethod("summary", "auto_occ_fit", function(object)
+summary.auto_occ_fit <- function(object, ...)
 {
   cat("\nCall:\n")
   print(object@call)
@@ -107,7 +122,7 @@ setMethod("summary", "auto_occ_fit", function(object)
   cat("\n")
   cat("AIC:", object@AIC,"\n")
   to_return <- new(
-    "summary.auto_occ_fit",
+    "auto_occ_summary",
     call = object@call,
     optim_convergence_code = object@opt$convergence,
     optim_iterations = object@opt$counts[1],
@@ -116,7 +131,7 @@ setMethod("summary", "auto_occ_fit", function(object)
     AIC = object@AIC
   )
   invisible(to_return)
-})
+}
 
 
 #' @importFrom methods show

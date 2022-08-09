@@ -62,3 +62,29 @@ of a species detection history get converted into what would be accepted by
    }
  }
 }
+\examples{
+data("opossum_det_hist")
+
+
+# a quick look at the top six rows of this data.frame
+#  so that you can see the ordering of the data.
+#       Site Season Week_1 Week_2 Week_3 Week_4
+# 1 D02-BMT1   JA19     NA      0     NA      0
+# 2 D02-HUP0   JA19     NA      0      0      0
+# 3 D02-JBS1   JA19     NA      0      1      0
+# 4 D02-MDU1   JA19     NA     NA     NA     NA
+# 5 D02-MOP1   JA19     NA      0      0      0
+# 6 D02-RCP1   JA19     NA      0      1      1
+#
+
+opossum_y <- format_y(
+  x = opossum_det_hist,
+  site_column = "Site",
+  time_column = "Season",
+  history_columns = "^Week", # the detection history columns all start with the word Week
+  report = FALSE #only setting to FALSE for example, defaults to TRUE
+)
+
+
+
+}

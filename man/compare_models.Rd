@@ -18,7 +18,133 @@ data.frame. Defaults to FALSE.}
 in the data.frame. Exists as an easy way to generate what could be a 'close
 to publication ready' AIC results table for a given analysis. Defaults to NULL.}
 }
+\value{
+A data.frame with a number of rows equal to the number of models in
+\code{model_list}. If models are not named, they will be named in the
+order they are input (e.g., \code{m1 == model_list[[1]])}). The default
+data.frame includes:
+
+\itemize{
+  \item{model}{The model names}
+  \item{npar}{The number of parameters in the model}
+  \item{AIC}{AIC score of a fitted model}
+  \item{delta}{delta AIC}
+  \item{AICwt}{The AIC weight of each model}
+  \item{cumltvWt}{The cumulative AIC weight}
+}
+
+If \code{add_formula = TRUE}, an additional formula column is added to the
+data.frame that includes the fitted model call as a character object.
+This defaults to \code{FALSE} as formulas can become quite long, making it
+difficult to view the data.frame easily in R.
+}
 \description{
-Given a (preferabbly named) list of models, calculate AIC,
+Given a (preferably named) list of models, calculate AIC,
  delta AIC, and cumulative model weight.
+}
+\details{
+In order to generate a data.frame of model selection results the
+response variable (i.e., the y array) must be identical among models. The
+models added to the \code{model_list} must all be unique as well.
+}
+\examples{
+
+data("opossum_det_hist")
+data("opossum_covariates")
+odh <- opossum_det_hist
+oc <- opossum_covariates
+# only grabbing the first 30 data.points from each season
+# for this example
+odh <- split(
+  odh,
+  factor(odh$Season, levels = unique(odh$Season))
+)
+odh <- do.call(
+  "rbind.data.frame",
+  lapply(
+    odh,
+    function(x) head(x,30)
+  )
+)
+oc <- head(oc,30)
+
+# function to generate detection history
+opossum_y <- autoOcc::format_y(
+  x = odh,
+  site_column = "Site",
+  time_column = "Season",
+  history_columns = "^Week", # start with Week
+  report = FALSE
+)
+
+
+# scale the covariates (with base R)
+oc_scaled <- as.data.frame(
+  lapply(
+    oc,
+    function(x){
+      if(is.numeric(x)){
+        scale(x)
+      }else{
+        x
+      }
+    }
+  )
+)
+# drop site names
+oc_scaled <- oc_scaled[,-1]
+# so many warnings
+m1 <- suppressWarnings(
+  auto_occ(
+    ~1~1,
+    y = opossum_y
+  )
+)
+m2 <- suppressWarnings(
+  auto_occ(
+    ~Impervious~Impervious,
+    y = opossum_y,
+    det_covs = oc_scaled,
+    occ_covs = oc_scaled
+  )
+)
+m3 <- suppressWarnings(
+  auto_occ(
+    ~Impervious + Income~Impervious + Income,
+    y = opossum_y,
+    det_covs = oc_scaled,
+    occ_covs = oc_scaled
+  )
+)
+m4 <- suppressWarnings(
+  auto_occ(
+    ~Income~Income,
+    y = opossum_y,
+    det_covs = oc_scaled,
+    occ_covs = oc_scaled
+  )
+)
+# Added as an unnamed list
+my_aic_results <- compare_models(
+  list(m1, m2,m3,m4)
+)
+
+# or you can do a named list
+also_my_aic_results <- compare_models(
+  list(
+    intercept_only = m1,
+    impervious = m2,
+    impervious_income = m3,
+    income = m4
+  )
+)
+
+# Add in formulas and reduce down to two significant digits
+pretty_results <- compare_models(
+  list(m1, m2, m3, m4),
+  add_formula = TRUE,
+  digits = 2
+)
+
+
 }
