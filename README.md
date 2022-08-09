@@ -29,7 +29,7 @@ devtools::install_github("mfidino/autoOcc")
 
 ---
 
-Mason Fidino is the sole contributing author of `autoOcc, though some of the code used in this package was based on the code and analysis flow of `unmarked`.
+Mason Fidino is the sole contributing author of `autoOcc`, though some of the code used in this package was based on the code and analysis flow of `unmarked`.
 
 If you are interested in contributing, see [Contributor Guidelines](CONTRIBUTING.md).
 
