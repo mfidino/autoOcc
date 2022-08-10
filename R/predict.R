@@ -117,14 +117,13 @@
 #' oc_scaled <- oc_scaled[,-1]
 #' # suppress warnings because opossum_y has sites
 #' #  with no data.
-#' m1 <- suppressWarnings(
-#'   auto_occ(
-#'     ~Impervious + Income  ~ Impervious + Income,
-#'     y = opossum_y,
-#'     det_covs = oc_scaled,
-#'     occ_covs = oc_scaled
-#'   )
+#' m1 <- auto_occ(
+#'   ~Impervious + Income  ~ Impervious + Income,
+#'   y = opossum_y,
+#'   det_covs = oc_scaled,
+#'   occ_covs = oc_scaled
 #' )
+
 #'
 #' # first make the prediction data.frame with a realistic
 #' #   range based on the actual data and not the scaled data.
@@ -282,7 +281,7 @@
         site_vec,
         nrow(data)/length(site_vec)
       )
-      data <- data[-which(site_vec %in% object@sites_removed),]
+      data <- data[-which(site_vec %in% object@sites_removed),,drop = FALSE]
     }
     data <- suppressWarnings(
       factor_df_cols(
@@ -363,7 +362,9 @@
         )
       )
     }
+    if(identical(paste0(as.character(my_formula),collapse = ""),"~1")){
+      pred_frame <- pred_frame[1,c("estimate","lower","upper"),drop = FALSE]
+    }
     return(pred_frame)
-
   }
 

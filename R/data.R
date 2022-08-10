@@ -1,7 +1,7 @@
 #' Virginia opossum detection / non-detection data from Chicago, IL
 #'
 #' A dataset containing weekly detection / non-detection data
-#' of Virginia opossum (Didelphis virginiana) at 102 unique
+#' of Virginia opossum (Didelphis virginiana) at 96 unique
 #' camera trapping locations during four primary sampling periods
 #' in 2019 throughout the Chicago greater metropolitan area.
 #' Camera traps were deployed for roughly 4 weeks over
@@ -14,7 +14,7 @@
 #' detection model not a Bernoulli like \code{\link{auto_occ}})
 #' does and so some formatting was needed).
 #'
-#' @format A data frame with 408 rows and 6 variables:
+#' @format A data frame with 384 rows and 6 variables:
 #' \describe{
 #'   \item{Site}{Abbreviation for the location sampled}
 #'   \item{Season}{Codes for the different primary sampling periods. JA19 = January 2019,
@@ -46,7 +46,7 @@
 #' This contains spatial covariates collected within a 1 km
 #' buffer of each camera trapping site (i.e., no temporal variation).
 #'
-#' @format A data frame with 102 rows and 7 variables in Site order:
+#' @format A data frame with 96 rows and 6 variables in Site order:
 #' \describe{
 #'   \item{Site}{Abbreviation for the location sampled}
 #'   \item{Building_age}{The median building age within 1 km of a site, in years. Data comes

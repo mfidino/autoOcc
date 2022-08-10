@@ -86,36 +86,31 @@
 #' # drop site names
 #' oc_scaled <- oc_scaled[,-1]
 #' # so many warnings
-#' m1 <- suppressWarnings(
-#'   auto_occ(
-#'     ~1~1,
-#'     y = opossum_y
-#'   )
+#' m1 <- auto_occ(
+#'   ~1~1,
+#'   y = opossum_y
 #' )
-#' m2 <- suppressWarnings(
-#'   auto_occ(
-#'     ~Impervious~Impervious,
-#'     y = opossum_y,
-#'     det_covs = oc_scaled,
-#'     occ_covs = oc_scaled
-#'   )
+#'
+#' m2 <- auto_occ(
+#'   ~Impervious~Impervious,
+#'   y = opossum_y,
+#'   det_covs = oc_scaled,
+#'   occ_covs = oc_scaled
 #' )
-#' m3 <- suppressWarnings(
-#'   auto_occ(
-#'     ~Impervious + Income~Impervious + Income,
-#'     y = opossum_y,
-#'     det_covs = oc_scaled,
-#'     occ_covs = oc_scaled
-#'   )
+#'
+#' m3 <- auto_occ(
+#'   ~Impervious + Income~Impervious + Income,
+#'   y = opossum_y,
+#'   det_covs = oc_scaled,
+#'   occ_covs = oc_scaled
 #' )
-#' m4 <- suppressWarnings(
-#'   auto_occ(
-#'     ~Income~Income,
-#'     y = opossum_y,
-#'     det_covs = oc_scaled,
-#'     occ_covs = oc_scaled
-#'   )
+#' m4 <- auto_occ(
+#'   ~Income~Income,
+#'   y = opossum_y,
+#'   det_covs = oc_scaled,
+#'   occ_covs = oc_scaled
 #' )
+#'
 #' # Added as an unnamed list
 #' my_aic_results <- compare_models(
 #'   list(m1, m2,m3,m4)

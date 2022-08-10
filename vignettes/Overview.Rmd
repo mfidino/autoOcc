@@ -1,0 +1,331 @@
+---
+title: "An overview of autoOcc: an R package to fit autologistic occupancy models"
+output: rmarkdown::html_vignette
+author: Mason Fidino
+vignette: >
+  %\VignetteIndexEntry{autoOcc_overview}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+options(rmarkdown.html_vignette.check_title = FALSE)
+```
+
+<style type="text/css">
+  body{
+  font-size: 14pt;
+}
+</style>
+
+Dynamic occupancy models can estimate local colonization ($\gamma$) and extinction ($\epsilon$) rates and are incredibly powerful, but data hungry tools. For example, simulation studies have suggested that a minimum of 120 unique sampling locations are necessary to accurately estimate both $\gamma$ and $\epsilon$ ([Mckann et al. 2012](https://wildlife.onlinelibrary.wiley.com/doi/abs/10.1002/jwmg.433))! In my experience, most occupancy studies sample far fewer than 120 sites over time, and so there is generally some uncertainty in how to model these data. Generally speaking, it would not be a good idea to fit a static occupancy model to all of the data for a couple reasons. First, doing so is pseudoreplication, and the resulting standard errors for your parameter estimates will be too precise. Second, fitting a standard single season occupancy model to multiple years of data fails to account for any potential temporal dependence among years. For example, if Virginia opossum (Didelphis virginiana) were present at one survey location in year 1, there may be a higher probability they are present in year 2. So, what do you do?
+
+Instead of fitting a dynamic occupancy model, one common suggestion is to use a ‘stacked design’ and fit a static occupancy model with a random site effect. This can be an appropriate technique, however it may have some of the same issues as fitting a dynamic occupancy model, namely the introduction of a potentially large number of parameters to be estimated. A simpler model is the autologistic formulation of a dynamic occupancy model, which includes a first-order autoregressive term to account for temporal dependence between primary sampling periods.
+
+The autoOcc package was created to provide a frequentist framework to fit autologistic occupancy models, perform model selection, and make model predictions. It is similar in spirit to the unmarked package, and much of
+the code used in autoOcc is based on the code from unmarked. Before providing an example of how to fit an autologisitic occupancy model in autoOcc, let's first explore the underlying model.
+
+## Model formulation
+
+Let $\Psi$ be the probability of occupancy and *z* be a Bernoulli random variable that equals 1 if a the species is present and 0 if it is absent. For *i* in 1,...,*I* sites and *t* in 1,...,*T* primary sampling periods, the probability of occupancy when *t* = 1 is:
+
+$$logit(\Psi_{i,t=1}) = \pmb{\beta}\pmb{x}_i$$
+
+$$z_{i,t=1} \sim Bernoulli(\Psi_{i,t=1}), t = 1$$
+
+where $\pmb{\beta}\pmb{x}_i$ represents a vector of regression coefficients (including the model intercept) and their associated covariates. This part of the model should look incredibly standard, because it is the latent state of a static occupancy model. For *t>1* however, we need to account for temporal dependence between primary sampling periods. To do so, we introduce $\theta$ into the model, which is a first-order autoregressive term. Thus, for the remaining sampling seasons, the logit-linear predictor is then:
+
+$$logit(\Psi_{i,t}) = \pmb{\beta}\pmb{x}_i + \theta \times z_{i,t-1}$$
+
+$$z_{i,t} \sim Bernoulli(\Psi_{i,t}), t > 1.$$
+
+Thus, the $\theta$ term in this model here helps us determine if species presence in the previous timestep is associated to species presence in the current time step.
+
+For the data model, let $\boldsymbol{Y}$ be a site by primary sampling period by observation period array (i.e., a three dimensional array). Thus, for $i$ in $1 \dots I$ sites, $t$ in $1 \dots T$ primary sampling periods and $j$ in $1 \dots J$ observation events within a given time period (i.e., secondary samples within a primary sampling period), the scalar $y_{i,t,j}$ takes the value of 1 if the species was detected, 0 if it was not detected but sampling occurred, and `NA` if sampling did not occur. Therefore, the vector $y_{i,t,1:J}$ the detection history for a species at site $i$ and time
+ $t$. Given a vector of parameters ($\boldsymbol{\alpha}$;
+i.e., the detection intercept and slope terms) and a matrix of
+covariates whose leading column is a vector of 1's ($\boldsymbol{W}$),
+the logit-linear predictor for the data model is
+
+ $$\mathrm{logit}(\rho_{i,t,j}) = \boldsymbol{\alpha}\boldsymbol{w}_{i}$$
+
+ where
+
+ $$y_{i,t,j}\sim \mathrm{Bernoulli}(\rho_{i,t,j} \times z_{i,t})$$
+
+In this example, detection probability only varies over sites. However, these covariates can also vary over primary sampling periods or observation events (e.g., different observers visit sites over time). Like the latent state linear predictor, this level of the model also includes regression coefficients and their associated covariates $\pmb{\alpha}\pmb{x}_i$), which may or may not be the same as what are included in the latent state model.  What is nice about this model is that it only includes one new parameter, $\theta$, and it does not have any random effects, which makes it simpler to interpret.  From this model, the expected occupancy probability is a little different than a standard static occupancy model. Assuming covariates are mean-centered, it can be derived as:
+
+$$\bar{\Psi} = \mathrm{ilogit}(\beta_0)/(\mathrm{ilogit}(\beta_0) + (1 - \mathrm{ilogit}(\beta_0 + \theta)))$$
+
+where *ilogit* is the inverse logit function and  $\beta_0$ is the occupancy intercept. Likewise, site-specific predictions can also be derived by including the respective slope terms and covariates into the above equation.
+
+## A typical autoOcc session
+
+To fit an autologistic occupancy model, data needs to be read in and appropriately formatted. This step here is most dissimilar to unmarked, namely there is no object that
+is created beforehand that contains all the response data or covariates.
+
+### Loading the detection data
+
+For this example, we are going to be working with an opossum dataset from Chicago,
+Illinois, collected via motion-triggered camera traps in urban greenspace by my
+colleagues and I at the Lincoln Park Zoo. The first step is to appropriately 
+format the observation array $\boldsymbol{Y}$ in to a site by primary sampling
+period by secondary observation period array. This can be done with the function
+`format_y().`
+
+```{r loading_data}
+library(autoOcc)
+
+# load in the data, you would instead read in a csv of your data
+data("opossum_det_hist")
+
+# take a quick look at these data
+head(opossum_det_hist)
+
+```
+
+These data are structured identically to how you would structure your data for
+a 'stacked-design' occupancy analysis. This means that sites are visited across
+multiple primary sampling periods (in this case four primary sampling periods),
+and the data are ordered by primary sampling period and then site.
+
+| Season  | Site | obs_1 | obs... | obs_J |
+|---------|------|-------|--------|-------|
+| Season1 | A    | NA    | 0      | 1     |
+| Season1 | B    | NA    | 0      | 0     |
+| Season1 | C    | 0     | 1      | 1     |
+| Season2 | A    | 1     | 0      | 0     |
+| Season2 | B    | NA    | NA     | NA    |
+| Season2 | C    | 0     | 0      | 1     |
+
+
+Note, however, that it is okay if all sites are not repeated across every single
+sampling season. When creating $\boldsymbol{Y}$, `format_y()` will identify the
+unique sites across sampling periods to generate the array and fill in NA's when
+needed. There are a few arguments in `format_y()` that must be added. More 
+specifically,you need to tell `format_y()` column identifiers for sites and season as well as which columns contain the species observations. There are a few different ways to do this
+```{r create_y}
+
+# Using names of the columns for site and season, and the regex for the
+#  columns associated to species observations. By default, this function
+#  will report on the ordering it used.
+opossum_y <- format_y(
+  x = opossum_det_hist,
+  site_column = "Site",
+  time_column = "Season",
+  history_columns = "Week"
+)
+
+
+# You can also just input the column numbers of each, setting report = FALSE
+#  so that it does not include the temporal ordering & detection history
+#  report that gets shared by default. Checking the column names to figure
+#  out where they are located numerically.
+colnames(opossum_det_hist)
+
+opossum_y <- format_y(
+  x = opossum_det_hist,
+  site_column = 1,
+  time_column = 2,
+  history_columns = 3:6,
+  report = FALSE
+)
+
+```
+
+The output from `format_y` creates an array with named dimensions. If we wanted
+to look at the detection history for the first sampling period we could query it
+like
+
+```{r first_period}
+
+# The first 6 detection histories for Janurary 2019
+head(opossum_y[,1,])
+
+
+```
+
+### Fitting an intercept only model
+
+With the species detection data properly formatted, the `auto_occ()` function
+can be called to fit an intercept only model. Similar to unmarked, the formula
+argument must be a double right-hand side formula that describes the covariates
+for detection and occupancy in that order.
+
+```{r intercept_only}
+m1 <- auto_occ(
+  formula = ~1~1,
+  y = opossum_y
+)
+
+
+# look at model summary, we can see here the psi - theta term is 
+#  positive, which indicates temporal dependence among primary
+#  sampling periods.
+summary(m1)
+
+# get expected occupancy, which is around 0.59.
+(
+  intercept_preds_psi <- predict(
+    m1,
+    type = "psi"
+  )
+)
+
+# get average weekly detection probability, which is about 0.53.
+(
+  intercept_preds_rho <- predict(
+    m1, 
+    type = "rho"
+  )
+)
+```
+
+### Including spatial and temporal variation
+
+The occupancy level of the model can incorporate covariates that vary by site
+or primary sampling period. The detection level of the not only include 
+covariates that vary by site and primary sampling period, but also covariates
+that vary by secondary observation periods. For example, if different observers
+go out to detect a species across sites.
+
+#### Occupancy covariates
+
+The occupancy covariates can either be a data.frame or named list. If the occupancy
+covariates are a data.frame, then it is assumed that there are no temporal covariates
+and the variation is only among sites. If the occupancy covariates are a named list,
+spatial covariates can be a vector within the list whereas temporally varying covariates
+should either be a matrix or data.frame with a number of rows equal to the number of
+sites and a number of columns equal to the number of primary sampling periods.
+We'll load some spatial covariates that were measured at each of the sites we
+did our camera trapping at using GIS. Covariates were queried using a 1 km buffer
+around each camera trapping location and include building age (average age buildings
+were built), impervious cover (proportion), per capita income (US dollars),
+human population density (people per km^2), and vacancy (vacant building per km^2). These covariates are ordered by site name and therefore follow the same pattern
+
+```{r site_covariates}
+
+data("opossum_covariates")
+
+head(opossum_covariates)
+
+# check that covariate data is ordered identically to the detection data
+all(opossum_covariates$Site == dimnames(opossum_y)[[1]])
+
+
+# scale the covariates before analysis.
+oc_scaled <- as.data.frame(
+  lapply(
+    opossum_covariates,
+    function(x){
+      if(is.numeric(x)){
+        scale(x)
+      }else{
+        x
+      }
+    }
+  )
+)
+    
+# and drop the site column here as it's not needed
+oc_scaled <- oc_scaled[,-1]
+
+# fit a model with Impervious cover and Income
+m2 <- auto_occ(
+  ~1~Impervious + Income,
+  y = opossum_y,
+  occ_covs = oc_scaled
+)
+
+summary(m2)
+
+
+
+# Make a temporally varying covariate, we can use the season sampled. For
+#  our example, we have the seasonal information in the detection history.
+#  Again, dropping out some sites that have no data.
+season_frame <- list(
+  season = matrix(
+    opossum_det_hist$Season,
+    nrow = length(unique(opossum_det_hist$Site)),
+    ncol = length(unique(opossum_det_hist$Season))
+  ),
+  Impervious = oc_scaled$Impervious,
+  Income = oc_scaled$Income
+)
+
+# This temporal covariate is categorical and varies by primary sampling period,
+#  as such, the first column of this matrix is full of "JA19", the second is
+#  full of "AP19", etc. etc.
+head(season_frame$season)
+
+
+m3 <- auto_occ(
+  ~1~season,
+  y = opossum_y,
+  occ_covs = season_frame
+)
+
+```
+#### Detection covariates
+
+The exact same model objects we created for `occ_covs` can also be included
+as covariates for detection probability, we would just need to add them in
+to the argument `det_covs`.
+
+```{r det_models}
+
+# spatial variation model
+m4 <- auto_occ(
+  ~Impervious + Income ~ Impervious + Income,
+  y = opossum_y,
+  det_covs = oc_scaled,
+  occ_covs = oc_scaled
+)
+
+# spatial and temporal variation model
+m5 <- auto_occ(
+  ~season + Impervious + Income ~ season + Impervious + Income,
+  y = opossum_y,
+  det_covs = season_frame,
+  occ_covs = season_frame
+)
+
+```
+To incorporate covariates on secondary observations, we use a similar format
+to unmarked. For each sampling period, you create a J columns, where J is the 
+total number of secondary observations per sampling period. In our example above, there are 4 weeks of observations per primary sampling period, so
+the detection matrix that would get added to a named list would be a 96 by 16 matrix (96 sites, 4 sampling periods x 4 observations). Following our example,
+the first 4 columns would be for each observation period during the first sampling period, which columns 5 through 8 would be for each observation for the second sampling period. We do not have observation specific data for our example (though you can see a simulated example in the help file of `auto_occ()`). We
+will just randomly generate some data to show as an example.
+
+```{r secondary_obs}
+
+obs_list <- list(
+  obs_cov = matrix(
+    rnorm(prod(dim(opossum_y))),
+    nrow = dim(opossum_y)[1],
+    ncol = prod(dim(opossum_y)[2:3])
+  )
+)
+# and if we wanted to add some informative column headers to remind ourselves
+#  of the structure they would be:
+colnames(obs_list$obs_cov) <- paste0(
+  "covar_",rep(1:4,each =  4),"_", rep(1:4)
+)
+head(colnames(obs_list$obs_cov),10)
+
+# this covariate should have no effect as it was just randomly generated
+m_example <- auto_occ(
+  ~obs_cov ~1,
+  y = opossum_y,
+  det_covs = obs_list
+)
+
+summary(m_example)
+
+```
