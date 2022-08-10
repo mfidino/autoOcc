@@ -196,7 +196,7 @@
 
 
   predict.auto_occ_fit <- function(object,type, newdata = NULL,level = 0.95, nsim = 3000, seed = NULL,...){
-    if(class(object) != "auto_occ_fit"){
+    if(!inherits(object,"auto_occ_fit")){
       stop("model object must be of class auto_occ_fit")
     }
     if(missing(type)){
@@ -267,7 +267,7 @@
     }else{
       data <- lapply(
         data,
-        as.vector
+        function(k) as.vector(unlist(k))
       )
       data <- do.call(
         "cbind.data.frame",

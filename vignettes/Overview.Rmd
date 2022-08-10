@@ -143,7 +143,7 @@ like
 
 ```{r first_period}
 
-# The first 6 detection histories for Janurary 2019
+# The first 6 detection histories for January 2019
 head(opossum_y[,1,])
 
 
@@ -197,9 +197,7 @@ method).
 
 ### Including spatial and temporal variation
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;The occupancy level of the model can incorporate covariates that vary by site
-or primary sampling period. The detection level of the not only include 
-covariates that vary by site and primary sampling period, but also covariates
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;The occupancy level of the model can incorporate covariates that vary by site or primary sampling period. In addition to covariates that vary by site or by primary sampling period, the detection level of the model can also incorporate covariates
 that vary by secondary observation periods. For example, if different observers
 go out to detect a species across sites.
 
@@ -211,8 +209,7 @@ and the variation is only among sites. If the occupancy covariates are a named l
 spatial covariates can be a vector within the list whereas temporally varying covariates
 should either be a matrix or data.frame with a number of rows equal to the number of
 sites and a number of columns equal to the number of primary sampling periods.
-We'll load some spatial covariates that were measured at each of the sites we
-did our camera trapping at using GIS. Covariates were queried using a 1 km buffer
+We'll load some spatial covariates that were measured at each of our sites. Covariates were queried using a 1 km buffer
 around each camera trapping location and include building age (average age buildings
 were built), impervious cover (proportion), per capita income (US dollars),
 human population density (people per km^2), and vacancy (vacant building per km^2). These covariates are ordered by site name and therefore follow the same pattern
@@ -253,11 +250,11 @@ m2 <- auto_occ(
 
 summary(m2)
 
+```
 
+And for temporally varying covariates we need to use a named list. For this example, we have seasonal information in the detection history dataset, so we can add that in as a categorical variable. Since impervious cover and income do not vary across primary sampling periods, we can just add them into the list as named vectors.
+```{r occupancy_named_list}
 
-# Make a temporally varying covariate, we can use the season sampled. For
-#  our example, we have the seasonal information in the detection history.
-#  Again, dropping out some sites that have no data.
 season_frame <- list(
   season = matrix(
     opossum_det_hist$Season,
@@ -273,7 +270,10 @@ season_frame <- list(
 #  full of "AP19", etc. etc.
 head(season_frame$season)
 
+```
+Now, the above named list can be added to `auto_occ()` and it will work, though you will recieve warnings because we added the seasonal information in as character objects.
 
+```{r occupancy_warning}
 m3 <- auto_occ(
   ~1~season,
   y = opossum_y,
@@ -281,11 +281,42 @@ m3 <- auto_occ(
 )
 
 ```
+
+If we wanted to remove that, we would have to make `season_frame$season` into a data.frame, where each column is a factor with the appropriate levels for the analysis.
+
+```{r fix_warning}
+
+unique_seasons <- as.vector(
+  unique(
+    season_frame$season
+    )
+)
+
+season_frame$season <- as.data.frame(season_frame$season)
+
+# make each column into a factor with the appropriate levels
+season_frame$season <- as.data.frame(
+  lapply(
+    season_frame$season,
+    function(x) factor(x, levels = unique_seasons)
+  )
+)
+
+# refit the model, now with no warnings
+m3 <- auto_occ(
+  ~1~season,
+  y = opossum_y,
+  occ_covs = season_frame
+)
+
+```
+
+
 #### Detection covariates
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;The exact same model objects we created for `occ_covs` can also be included
-as covariates for detection probability, we would just need to add them in
-to the argument `det_covs`.
+as covariates for detection probability, we would just need to add them 
+to the `det_covs` argument within `auto_occ()`.
 
 ```{r det_models}
 
@@ -307,10 +338,10 @@ m5 <- auto_occ(
 
 ```
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;To incorporate covariates on secondary observations, we use a similar format
-to unmarked. For each sampling period, you create a J columns, where J is the 
-total number of secondary observations per sampling period. In our example above, there are 4 weeks of observations per primary sampling period, so
-the detection matrix that would get added to a named list would be a 96 by 16 matrix (96 sites, 4 sampling periods x 4 observations). Following our example,
-the first 4 columns would be for each observation period during the first sampling period, which columns 5 through 8 would be for each observation for the second sampling period. We do not have observation specific data for our example (though you can see a simulated example in the help file of `auto_occ()`). We
+to unmarked. For each sampling period, you create J columns, where J is the 
+ number of secondary observations across all sampling periods. In our example above, there are 4 weeks of observations per primary sampling period, so
+the detection matrix that would get added to a named list would be a 96 by 16 matrix (96 sites, 4 sampling periods x 4 observations per sampling period). Following our example,
+the first 4 columns would be for each observation during the first sampling period, while columns 5 through 8 would be for each observation for the second sampling period. We do not have observation specific data for our example (though you can see a simulated example in the help file of `auto_occ()`). We
 will just randomly generate some data to show as an example.
 
 ```{r secondary_obs}
@@ -339,3 +370,103 @@ m_example <- auto_occ(
 summary(m_example)
 
 ```
+
+## Model selection
+
+Now that we have fit a suite of models, one thing we may be interested in doing is comparing the relative fit of each model. We can use `compare_models()` to rank the relative fit of each model using AIC. To use this function, we just need to wrap up the models we want to compare into a list. Additionally, we will reduce the number of significant digits
+
+```{r model_comparison}
+
+my_aic_results <- compare_models(
+  list(m1, m2, m3, m4,m5),
+  digits = 2
+)
+
+# look at output
+my_aic_results
+
+```
+And it looks like our full model here that adds a seasonal covariate, impervious cover, and income is the best fit model.
+
+## Making model predictions
+
+Now that we have a best fit model, one thing we would like to do is to make model predictions. Given that we scaled our continuous covariates,
+we will need to generate a sequence of values that are scaled for each
+covariate. However, we only scaled these covariates so that we can compare effect size, and we would like to plot them back out on the real scale. Looking at the model summary of `m5`, it appears that occupancy was lower in July 2019 when compared to the baseline category of January 2019. Conversely, we failed to detect a difference in occupancy in April 2019 and October 2019 relative to the baseline category. Regardless, we
+will go ahead and make plots for each sampling period.
+
+```{r make_predictions}
+
+# first make the prediction data.frame with a realistic
+#   range based on the actual data and not the scaled data.
+#   The range(oc$Impervious) is about 18 to 81, so choose 20
+#   to 80. We do this so that we have nice numbers for plotting.
+#   Likewise, we scaled all of the other data, so we leave Income
+#   at it's mean (i.e., 0) for predictions.
+imperv_seq <- seq(20,80,0.05)
+season_levels <- levels(season_frame$season$V1)
+imperv_real <- data.frame(
+  Impervious = rep(
+    imperv_seq,
+    length(season_levels)
+  ),
+  Income = 0,
+  season = factor(
+    rep(season_levels,
+        each = length(imperv_seq)
+    ),
+    levels = season_levels
+  )
+)
+
+```
+ We will use `imperv_real` for plotting purposes, but to make predictions
+  we need to scale imperv_real$Impervious in the exact same way we did
+  with the fitted model. Thus, we subtract the mean of the actual data
+  and divide by the standard deviation.
+```{r rescale, fig.show="hold", out.width="40%"}
+
+imperv_scaled <- imperv_real
+imperv_scaled$Impervious <- (
+  imperv_scaled$Impervious - mean(opossum_covariates$Impervious)
+) / sd(opossum_covariates$Impervious)
+
+# the model prediction across a gradient of Impervious cover
+opo_imperv <- predict(
+  object = m5,
+  type = "psi",
+  newdata = imperv_scaled
+)
+
+# add on the covariate data
+opo_imperv <- data.frame(
+  opo_imperv,
+  imperv_real
+)
+# split by season
+opo_imperv <- split(
+  opo_imperv,
+  opo_imperv$season
+)
+
+my_colors <- c("orange", "skyblue", "green","yellow")
+# plot it out
+for(i in 1:4){
+  plot(
+    opo_imperv[[i]]$estimate ~ opo_imperv[[i]]$Impervious,
+    bty = "l",
+    type = "l",
+    las = 1,
+    ylab = "Occupancy",
+    xlab= "Impervious Cover (%)",
+    ylim = c(0,1),
+    lwd = 3,
+    main = names(opo_imperv)[i]
+)
+lines(opo_imperv[[i]]$lower ~ opo_imperv[[i]]$Impervious, lwd = 2, lty = 2)
+lines(opo_imperv[[i]]$upper ~ opo_imperv[[i]]$Impervious, lwd = 2, lty = 2)
+}
+
+
+```
+

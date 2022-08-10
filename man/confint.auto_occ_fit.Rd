@@ -68,11 +68,9 @@ opossum_y <- autoOcc::format_y(
 )
 
 # suppressing warnings because of missing data
-m1 <- suppressWarnings(
-  auto_occ(
-    ~1~1,
-    y = opossum_y
-  )
+m1 <- auto_occ(
+  ~1~1,
+  y = opossum_y
 )
 # get 80\% confidence intervals for occupancy
 psi_80 <- confint(
