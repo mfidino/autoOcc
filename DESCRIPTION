@@ -1,11 +1,11 @@
-Package: autoOcc
 Type: Package
-Title: Fits autologistic occupancy models
 Version: 0.1.0
 Author: person("Mason", "Fidino","mfidino@lpzoo.org", role = c("aut","cre"))
 Maintainer: Mason Fidino <mfidino@lpzoo.org>
-Description: Fits autologistic occupancy models, compares sets of models, and generates model predictions.
-License: MIT + file LICENSE
+Package: autoOcc
+Title: Fits Autologistic Occupancy Models, Compares Models, and Generates Model Predictions.
+Description: autoOcc is an R package to fit an autologistic occupancy model, which is a simplified version of a dynamic occupancy model that is espcially useful when dealing with smaller datasets. autoOcc fits this model hierarchically so that different covariates can be used on a species latent occupancy and detection probability. Most of the functions here behave similarly to those in unmarked. In fact, much of the code from unmarked, which is under GPL(>3) license, was modified for this R package. A such, using autoOcc should be somewhat familar to those who have experience with analyses in unmarked.
+License: GPL (>=3) + file LICENSE
 Encoding: UTF-8
 Depends: 
     methods,
@@ -20,3 +20,4 @@ Suggests:
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
 VignetteBuilder: knitr
+BugReports: https://github.com/mfidino/autoOcc/issues

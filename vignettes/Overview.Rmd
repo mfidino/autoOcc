@@ -18,7 +18,7 @@ options(rmarkdown.html_vignette.check_title = FALSE)
 
 <style type="text/css">
   body{
-  font-size: 14pt;
+  font-size: 12pt;
 }
 </style>
 
