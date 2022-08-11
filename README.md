@@ -90,9 +90,7 @@ oc_scaled <- as.data.frame(
 # dropping site column from oc_scaled
 oc_scaled <- oc_scaled[,-1]
 
-# suppress warnings because opossum_y has sites
-#  with no data, will return warning because some
-#  sites have no data.
+
 m1 <- auto_occ(
     ~Impervious + Income  ~ Impervious + Income,
     y = opossum_y,
