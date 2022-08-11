@@ -31,7 +31,7 @@ test_that(
       )
     )
     # so many warnings
-    expect_warning(
+
       expect_warning(
         expect_warning(
           m1 <- auto_occ(
@@ -42,15 +42,12 @@ test_that(
           )
        )
      )
-    )
     # drop sites with no data, refit model
-    new_y <- opossum_y[-c(4,12,17),,]
-    new_oc <- oc_scaled[-c(4,12,17),]
-    new_oc <- new_oc[,-1]
+    new_oc <- oc_scaled[,-1]
     expect_silent(
       m1 <- auto_occ(
         formula = ~Impervious ~ Impervious,
-        y = new_y,
+        y = opossum_y,
         det_covs = new_oc,
         occ_covs = new_oc
       )
@@ -59,7 +56,7 @@ test_that(
     expect_silent(
       m1 <- auto_occ(
         formula = ~1~1,
-        y = new_y,
+        y = opossum_y,
         det_covs = new_oc,
         occ_covs = new_oc
       )
@@ -68,7 +65,7 @@ test_that(
     expect_error(
       m1 <- auto_occ(
         formula = ~1,
-        y = new_y,
+        y = opossum_y,
         det_covs = new_oc,
         occ_covs = new_oc
       )
@@ -77,7 +74,7 @@ test_that(
     expect_error(
       m1 <- auto_occ(
         formula = ~critical~hit,
-        y = new_y,
+        y = opossum_y,
         det_covs = new_oc,
         occ_covs = new_oc
       )
@@ -85,7 +82,7 @@ test_that(
     expect_error(
       m1 <- auto_occ(
         formula = ~1~1,
-        y = new_y,
+        y = opossum_y,
         det_covs = new_oc,
         occ_covs = new_oc,
         level = 1
@@ -94,7 +91,7 @@ test_that(
     expect_error(
       m1 <- auto_occ(
         formula = ~1~1,
-        y = new_y,
+        y = opossum_y,
         det_covs = new_oc,
         occ_covs = new_oc,
         level = "battery"
@@ -103,14 +100,14 @@ test_that(
     expect_silent(
       m1 <- auto_occ(
         formula = ~1~1,
-        y = new_y
+        y = opossum_y
       )
     )
     expect_silent(
       {
       m1 <- auto_occ(
         formula = ~1~1,
-        y = new_y
+        y = opossum_y
       )
       tmp_output <- capture.output(
         msum <- summary(m1)
@@ -128,9 +125,19 @@ test_that(
     expect_error(
       auto_occ(
         ~1~1,
-        y = new_y,
+        y = opossum_y,
         method = "roll initiative"
       )
     )
+    # add all NA
+    new_y <- opossum_y
+    new_y[5,,] <- NA
+    expect_warning(
+      auto_occ(
+        ~1~1,
+        y = new_y
+      )
+    )
+
   }
 )

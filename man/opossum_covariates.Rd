@@ -5,7 +5,7 @@
 \alias{opossum_covariates}
 \title{Spatial environmental covariates throughout Chicago, IL}
 \format{
-A data frame with 102 rows and 7 variables in Site order:
+A data frame with 96 rows and 6 variables in Site order:
 \describe{
   \item{Site}{Abbreviation for the location sampled}
   \item{Building_age}{The median building age within 1 km of a site, in years. Data comes

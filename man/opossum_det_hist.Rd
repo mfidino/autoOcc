@@ -5,7 +5,7 @@
 \alias{opossum_det_hist}
 \title{Virginia opossum detection / non-detection data from Chicago, IL}
 \format{
-A data frame with 408 rows and 6 variables:
+A data frame with 384 rows and 6 variables:
 \describe{
   \item{Site}{Abbreviation for the location sampled}
   \item{Season}{Codes for the different primary sampling periods. JA19 = January 2019,
@@ -33,7 +33,7 @@ opossum_det_hist
 }
 \description{
 A dataset containing weekly detection / non-detection data
-of Virginia opossum (Didelphis virginiana) at 102 unique
+of Virginia opossum (Didelphis virginiana) at 96 unique
 camera trapping locations during four primary sampling periods
 in 2019 throughout the Chicago greater metropolitan area.
 Camera traps were deployed for roughly 4 weeks over

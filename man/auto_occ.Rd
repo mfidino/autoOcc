@@ -170,14 +170,12 @@ handle this for you.
  )
 
 
- # fit the model, suppressing warnings as there are some
- #  sites with no data.
- m1 <- suppressWarnings(
-   auto_occ(
-     formula = ~1 ~1,
-     y = opossum_y
-   )
+ # fit the model, s
+ m1 <- auto_occ(
+   formula = ~1 ~1,
+   y = opossum_y
  )
+
 
 ########################################
 # Example 2 : Adding spatial covariates,
@@ -206,17 +204,15 @@ handle this for you.
    )
  )
 
- # And fit a single model with covariates that vary spatially,
- #  again, suppressing warnings for this example.
+ # And fit a single model with covariates that vary spatially.
 
- m2 <- suppressWarnings(
-   auto_occ(
-     formula = ~Impervious ~Impervious,
-     y = opossum_y,
-     det_covs = oc_scaled,
-     occ_covs = oc_scaled
-   )
+ m2 <- auto_occ(
+   formula = ~Impervious ~Impervious,
+   y = opossum_y,
+   det_covs = oc_scaled,
+   occ_covs = oc_scaled
  )
+
  summary(m2)
 
 ###################################################
@@ -238,14 +234,13 @@ handle this for you.
    ),
    Impervious = oc_scaled$Impervious
  )
- m3 <- suppressWarnings(
-   auto_occ(
-    formula =  ~Season + Impervious ~Season + Impervious,
-     y = opossum_y,
-     det_covs = season_frame,
-     occ_covs = season_frame
-   )
+ m3 <- auto_occ(
+   formula =  ~Season + Impervious ~Season + Impervious,
+   y = opossum_y,
+   det_covs = season_frame,
+   occ_covs = season_frame
  )
+
  summary(m3)
 
 ###################################################

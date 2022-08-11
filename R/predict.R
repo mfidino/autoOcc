@@ -117,14 +117,13 @@
 #' oc_scaled <- oc_scaled[,-1]
 #' # suppress warnings because opossum_y has sites
 #' #  with no data.
-#' m1 <- suppressWarnings(
-#'   auto_occ(
-#'     ~Impervious + Income  ~ Impervious + Income,
-#'     y = opossum_y,
-#'     det_covs = oc_scaled,
-#'     occ_covs = oc_scaled
-#'   )
+#' m1 <- auto_occ(
+#'   ~Impervious + Income  ~ Impervious + Income,
+#'   y = opossum_y,
+#'   det_covs = oc_scaled,
+#'   occ_covs = oc_scaled
 #' )
+
 #'
 #' # first make the prediction data.frame with a realistic
 #' #   range based on the actual data and not the scaled data.
@@ -197,7 +196,7 @@
 
 
   predict.auto_occ_fit <- function(object,type, newdata = NULL,level = 0.95, nsim = 3000, seed = NULL,...){
-    if(class(object) != "auto_occ_fit"){
+    if(!inherits(object,"auto_occ_fit")){
       stop("model object must be of class auto_occ_fit")
     }
     if(missing(type)){
@@ -268,7 +267,7 @@
     }else{
       data <- lapply(
         data,
-        as.vector
+        function(k) as.vector(unlist(k))
       )
       data <- do.call(
         "cbind.data.frame",
@@ -282,7 +281,7 @@
         site_vec,
         nrow(data)/length(site_vec)
       )
-      data <- data[-which(site_vec %in% object@sites_removed),]
+      data <- data[-which(site_vec %in% object@sites_removed),,drop = FALSE]
     }
     data <- suppressWarnings(
       factor_df_cols(
@@ -363,7 +362,9 @@
         )
       )
     }
+    if(identical(paste0(as.character(my_formula),collapse = ""),"~1")){
+      pred_frame <- pred_frame[1,c("estimate","lower","upper"),drop = FALSE]
+    }
     return(pred_frame)
-
   }
 

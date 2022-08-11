@@ -132,6 +132,15 @@ test_that(
     expect_silent(
       predict(m3, type = "rho")
     )
-
+    # fit null model
+    mnull <- suppressWarnings(
+      auto_occ(
+        ~1~1,
+        y = opossum_y
+      )
+    )
+    expect_silent(
+      predict(mnull, type = "psi")
+    )
   }
 )

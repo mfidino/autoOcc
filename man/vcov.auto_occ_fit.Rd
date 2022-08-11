@@ -73,14 +73,12 @@ This function is largely used for making model predictions via
  )
  # drop site names
  oc_scaled <- oc_scaled[,-1]
- # suppressing warnings because of missing data
- m1 <- suppressWarnings(
-   auto_occ(
-     ~Impervious~Impervious+Income,
-     y = opossum_y,
-     det_covs = oc_scaled,
-     occ_covs = oc_scaled
-   )
+
+ m1 <- auto_occ(
+   ~Impervious~Impervious+Income,
+   y = opossum_y,
+   det_covs = oc_scaled,
+   occ_covs = oc_scaled
  )
  my_vcov <- vcov(m1)
 }

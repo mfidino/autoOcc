@@ -121,13 +121,11 @@ oc_scaled <- as.data.frame(
 oc_scaled <- oc_scaled[,-1]
 # suppress warnings because opossum_y has sites
 #  with no data.
-m1 <- suppressWarnings(
-  auto_occ(
-    ~Impervious + Income  ~ Impervious + Income,
-    y = opossum_y,
-    det_covs = oc_scaled,
-    occ_covs = oc_scaled
-  )
+m1 <- auto_occ(
+  ~Impervious + Income  ~ Impervious + Income,
+  y = opossum_y,
+  det_covs = oc_scaled,
+  occ_covs = oc_scaled
 )
 
 # first make the prediction data.frame with a realistic

@@ -27,9 +27,13 @@ functions are stable.
 
 ```R
 install.packages("devtools")
-devtools::install_github("mfidino/autoOcc")
+devtools::install_github(
+  "mfidino/autoOcc",
+  build_vignettes = TRUE
+)
 
 ```
+
 
 ## Author Contributions
 
@@ -38,6 +42,16 @@ devtools::install_github("mfidino/autoOcc")
 Mason Fidino is the sole contributing author of `autoOcc`, though some of the code used in this package was based on the code and analysis flow of `unmarked`.
 
 If you are interested in contributing, see [Contributor Guidelines](CONTRIBUTING.md).
+
+## Overview vignette
+
+If you want a more thorough walkthrough of a standard analysis in `autoOcc`,
+and had made certain to build the vignettes when installing from github,
+check out the overview vignette with:
+
+```R
+vignette("Overview")
+```
 
 ## Example analysis
 
