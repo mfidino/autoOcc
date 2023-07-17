@@ -10,6 +10,9 @@
  
 `autoOcc` is an R package to fit an autologistic occupancy model, which is a simplified version of a dynamic occupancy model that is espcially useful when dealing with smaller datasets. `autoOcc` fits this model hierarchically so that different covariates can be used on a species latent occupancy and detection probability. Most of the functions here behave similarly to those in `unmarked`, so using `autoOcc` should be somewhat familar to those who have experience with that R package.
 
+## News
+
+2023 - 07 - 17: Fixed a small bug with `autoOcc::predict()`. Previously, factors that did not use the standard ordering for levels (i.e., alphabetical) would get converted to alphabetical when making predictions. This would lead to wrong predictions. Factor level ordering is now retained.
 
 ## Status: Experimental, active developement
 
