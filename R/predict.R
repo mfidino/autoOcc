@@ -195,176 +195,207 @@
 #' lines(opo_income$upper ~ income_real$Income, lwd = 2, lty = 2)
 
 
-  predict.auto_occ_fit <- function(object,type, newdata = NULL,level = 0.95, nsim = 3000, seed = NULL,...){
-    if(!inherits(object,"auto_occ_fit")){
-      stop("model object must be of class auto_occ_fit")
-    }
-    if(missing(type)){
-      stop("Supply either 'psi' or 'rho' as type for predictions.")
-    }
-    if(!type %in% c("psi","rho")){
-      stop("type must be either' psi' for occupancy or 'rho' for detection." )
-    }
-    if(!is.numeric(level)){
-      stop("level must be a numeric")
-    }
-    if(level >= 1 | level <= 0){
-      stop("level must be a number between 0 and 1")
-    }
-    char <- lapply(object@formula, function(x) {
-      paste(deparse(x), collapse = "")
-    })
+predict.auto_occ_fit <- function(object,type, newdata = NULL,level = 0.95, nsim = 3000, seed = NULL,...){
+  if(!inherits(object,"auto_occ_fit")){
+    stop("model object must be of class auto_occ_fit")
+  }
+  if(missing(type)){
+    stop("Supply either 'psi' or 'rho' as type for predictions.")
+  }
+  if(!type %in% c("psi","rho")){
+    stop("type must be either' psi' for occupancy or 'rho' for detection." )
+  }
+  if(!is.numeric(level)){
+    stop("level must be a numeric")
+  }
+  if(level >= 1 | level <= 0){
+    stop("level must be a number between 0 and 1")
+  }
+  char <- lapply(object@formula, function(x) {
+    paste(deparse(x), collapse = "")
+  })
+  if(type == "psi"){
+    my_formula <- as.formula(paste("~", char[[3]]))
+  }else{
+    my_formula <- as.formula(char[[2]])
+  }
+  #sep
+  if(
+    is.null(newdata)
+  ){
+    tack_on <- TRUE
     if(type == "psi"){
-      my_formula <- as.formula(paste("~", char[[3]]))
+      newdata <- object@occcovs
     }else{
-      my_formula <- as.formula(char[[2]])
+      newdata <- object@detcovs
     }
-    if(
-      is.null(newdata)
-    ){
-      tack_on <- TRUE
-     if(type == "psi"){
-       newdata <- object@occcovs
-     }else{
-       newdata <- object@detcovs
-     }
-      newdata <- lapply(
-        newdata,
-        as.vector
-      )
-      newdata <- do.call(
-        "cbind.data.frame",
-        newdata
-      )
-      site_vec <- 1:(dim(object@y)[1] + length(object@sites_removed))
-      site_vec <- rep(
-        site_vec,
-        nrow(newdata)/length(site_vec)
-      )
-      if(length(object@sites_removed)>0){
-        newdata <- newdata[-which(site_vec %in% object@sites_removed),]
-      }
-      newdata <- as.data.frame(newdata)
-      newdata <- suppressWarnings(
-        factor_df_cols(
-          newdata,
-          type = type
-        )
-      )
-    } else{
-      tack_on <- FALSE
-    }
-
-#get the old dm
-    if(type == "psi"){
-      data <- object@occcovs
-    } else {
-      data <- object@detcovs
-    }
-    # check if temporally varying psi
-    if(all(sapply(sapply(data, nrow),is.null))){
-      data <- as.data.frame(data)
-    }else{
-      data <- lapply(
-        data,
-        function(k) as.vector(unlist(k))
-      )
-      data <- do.call(
-        "cbind.data.frame",
-        data
-      )
-      data <- as.data.frame(data)
-    }
+    newdata <- lapply(
+      newdata,
+      as.vector
+    )
+    newdata <- do.call(
+      "cbind.data.frame",
+      newdata
+    )
+    site_vec <- 1:(dim(object@y)[1] + length(object@sites_removed))
+    site_vec <- rep(
+      site_vec,
+      nrow(newdata)/length(site_vec)
+    )
     if(length(object@sites_removed)>0){
-      site_vec <- 1:(dim(object@y)[1] + length(object@sites_removed))
-      site_vec <- rep(
-        site_vec,
-        nrow(data)/length(site_vec)
-      )
-      data <- data[-which(site_vec %in% object@sites_removed),,drop = FALSE]
+      newdata <- newdata[-which(site_vec %in% object@sites_removed),]
     }
-    data <- suppressWarnings(
+    newdata <- as.data.frame(newdata)
+    newdata <- suppressWarnings(
       factor_df_cols(
-        data,
+        newdata,
         type = type
       )
     )
+  } else{
+    tack_on <- FALSE
+  }
 
-    mf <- suppressWarnings(
-      get_dm(
-        data,
-        my_formula = my_formula,
-        type = type,
-        y = object@y
+  #get the old dm
+  if(type == "psi"){
+    data <- object@occcovs
+  } else {
+    data <- object@detcovs
+  }
+  # collect levels of the factors if they are there
+  fac_levels <- vector("list", length = length(data))
+  names(fac_levels) <- names(data)
+  for(i in 1:length(fac_levels)){
+    if(is.data.frame(data[[i]])){
+      is_factor <- sapply(
+        data[[i]],
+        is.factor
       )
+      if(all(is_factor)){
+        fac_levels[[i]] <- levels(
+          data[[i]][,1]
+        )
+      }
+    }
+    if(is.factor(data[[i]])){
+      fac_levels[[i]] <- levels(data[[i]])
+    }
+  }
+  # check if temporally varying psi
+  if(all(sapply(sapply(data, nrow),is.null))){
+    data <- as.data.frame(data)
+  }else{
+    data <- lapply(
+      data,
+      function(k) as.vector(unlist(k))
     )
-    fac_cols <- data[, sapply(data, is.factor), drop=FALSE]
-    xlevs <- lapply(fac_cols, levels)
-    nmf <- model.frame(my_formula, newdata, na.action=stats::na.pass, xlev = xlevs)
-    X <- model.matrix(my_formula, newdata, xlev=xlevs)
-    offset <- model.offset(nmf)
+    data <- do.call(
+      "cbind.data.frame",
+      data
+    )
+    data <- as.data.frame(data)
+  }
+  if(any(length(sapply(fac_levels, length))>0)){
+    for(i in 1:ncol(data)){
+      if(length(fac_levels[[i]])>0){
+        data[,i] <- factor(
+          data[,i],
+          levels = fac_levels[[i]]
+        )
+      }
+    }
+  }
 
-    # get variance covariance matrix
-    covMat <- vcov(
-      object,
+  if(length(object@sites_removed)>0){
+    site_vec <- 1:(dim(object@y)[1] + length(object@sites_removed))
+    site_vec <- rep(
+      site_vec,
+      nrow(data)/length(site_vec)
+    )
+    data <- data[-which(site_vec %in% object@sites_removed),,drop = FALSE]
+  }
+  data <- suppressWarnings(
+    factor_df_cols(
+      data,
       type = type
     )
+  )
 
-    est <- object@estimates
-    est <- est$Est[grep(type,est$parameter)]
-    if (is.null(offset)){
-      offset <- rep(0, nrow(X))
-    }
+  mf <- suppressWarnings(
+    get_dm(
+      data,
+      my_formula = my_formula,
+      type = type,
+      y = object@y
+    )
+  )
+  fac_cols <- data[, sapply(data, is.factor), drop=FALSE]
+  xlevs <- lapply(fac_cols, levels)
+  nmf <- suppressWarnings(model.frame(my_formula, newdata, na.action=stats::na.pass, xlev = xlevs))
+  X <- suppressWarnings(model.matrix(my_formula, newdata, xlev=xlevs))
+  offset <- model.offset(nmf)
 
-    if(!is.null(seed)){
-      set.seed(seed = seed)
-    }
-    mvn_samples <- mvtnorm::rmvnorm(
-      nsim,
-      mean=est,
-      sigma=covMat,
-      method="svd"
-    )
-    # logit-predictions without theta
-    if(type == "psi"){
-      e1 <- cbind(X,0) %*% t(mvn_samples)
-      e1 <- sweep(e1, 1, offset, FUN = "+")
-      # logit-predictions with theta
-      e2 <- cbind(X,1) %*% t(mvn_samples)
-      e2 <- sweep(e2, 1, offset, FUN = "+")
-      # calculate expected occupancy
-      e3 <- plogis(e1) / (plogis(e1) + (1 - plogis(e2)))
-    }
-    if(type == "rho"){
-      e2 <- X %*% t(mvn_samples)
-      e2 <- sweep(e2, 1, offset, FUN = "+")
-      e3 <- plogis(e2)
-    }
-    my_levels <-(1 - level)/2
-    predictions <- t(
-      apply(
-        e3,
-        1,
-        stats::quantile,
-        probs = c(my_levels, 0.5, 1 - my_levels)
-      )
-    )
-    pred_frame <- data.frame(
-      estimate = predictions[,2],
-      lower = predictions[,1],
-      upper = predictions[,3]
-    )
-    if(tack_on){
-      pred_frame <- cbind.data.frame(
-        list(
-          pred_frame,
-          newdata
-        )
-      )
-    }
-    if(identical(paste0(as.character(my_formula),collapse = ""),"~1")){
-      pred_frame <- pred_frame[1,c("estimate","lower","upper"),drop = FALSE]
-    }
-    return(pred_frame)
+  # get variance covariance matrix
+  covMat <- vcov(
+    object,
+    type = type
+  )
+
+  est <- object@estimates
+  est <- est$Est[grep(type,est$parameter)]
+  if (is.null(offset)){
+    offset <- rep(0, nrow(X))
   }
+
+  if(!is.null(seed)){
+    set.seed(seed = seed)
+  }
+  mvn_samples <- mvtnorm::rmvnorm(
+    nsim,
+    mean=est,
+    sigma=covMat,
+    method="svd"
+  )
+  # logit-predictions without theta
+  if(type == "psi"){
+    e1 <- cbind(X,0) %*% t(mvn_samples)
+    e1 <- sweep(e1, 1, offset, FUN = "+")
+    # logit-predictions with theta
+    e2 <- cbind(X,1) %*% t(mvn_samples)
+    e2 <- sweep(e2, 1, offset, FUN = "+")
+    # calculate expected occupancy
+    e3 <- plogis(e1) / (plogis(e1) + (1 - plogis(e2)))
+  }
+  if(type == "rho"){
+    e2 <- X %*% t(mvn_samples)
+    e2 <- sweep(e2, 1, offset, FUN = "+")
+    e3 <- plogis(e2)
+  }
+  my_levels <-(1 - level)/2
+  predictions <- t(
+    apply(
+      e3,
+      1,
+      stats::quantile,
+      probs = c(my_levels, 0.5, 1 - my_levels)
+    )
+  )
+  pred_frame <- data.frame(
+    estimate = predictions[,2],
+    lower = predictions[,1],
+    upper = predictions[,3]
+  )
+  if(tack_on){
+    pred_frame <- cbind.data.frame(
+      list(
+        pred_frame,
+        newdata
+      )
+    )
+  }
+  if(identical(paste0(as.character(my_formula),collapse = ""),"~1")){
+    pred_frame <- pred_frame[1,c("estimate","lower","upper"),drop = FALSE]
+  }
+  return(pred_frame)
+}
 
