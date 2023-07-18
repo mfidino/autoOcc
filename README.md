@@ -6,13 +6,36 @@
 [![R build status](https://github.com/mfidino/autoOcc/workflows/R-CMD-check/badge.svg)](https://github.com/mfidino/autoOcc/actions)
 <!-- badges: end -->
 
-# autoOcc 0.1.0
+# autoOcc 0.1.1
  
 `autoOcc` is an R package to fit an autologistic occupancy model, which is a simplified version of a dynamic occupancy model that is espcially useful when dealing with smaller datasets. `autoOcc` fits this model hierarchically so that different covariates can be used on a species latent occupancy and detection probability. Most of the functions here behave similarly to those in `unmarked`, so using `autoOcc` should be somewhat familar to those who have experience with that R package.
 
 ## News
 
-2023 - 07 - 17: Fixed a small bug with `autoOcc::predict()`. Previously, factors that did not use the standard ordering for levels (i.e., alphabetical) would get converted to alphabetical when making predictions. This would lead to wrong predictions. Factor level ordering is now retained.
+2023 - 07 - 18: Released version 0.1.1. There are two new features and two
+bug fixes.
+
+1. p values have been added to the estimates table for auto_occ_fit objects. As just one example here is a snippet from a summary of a
+an `auto_occ_fit` object.
+
+```
+Occupancy estimates:
+
+          parameter    Est    SE lower   upper        p
+1 psi - (Intercept) -0.727 0.342 -1.40 -0.0574 0.033341
+2  psi - Impervious -0.991 0.496 -1.96 -0.0187 0.045757
+3       psi - theta  2.785 0.845  1.13  4.4403 0.000974
+
+```
+2. A new function, `autoOcc::model_list_estimates()` to compile all the parameter estimates and standard errors from a list of models. This could be useful, for example, if you would like to do some model averaging. See the example analysis below to see this function be used.
+
+
+3. Added in some error catching in the event that duplicated site names
+were included within a primary sampling period within `autoOcc::format_y`. Previously, this would error out in a non-informative way.
+
+4. There was a small bug with `autoOcc::predict()`.Previously, factors that did not use the standard ordering for levels (i.e., alphabetical) would get converted to alphabetical when making predictions. This would lead to wrong predictions. Factor level ordering is now retained.
+
+
 
 ## Status: Experimental, active developement
 
@@ -120,11 +143,21 @@ m4 <- auto_occ(
  occ_covs = oc_scaled
 )
 
-# compare models
+# compare models, make a list object of the model first.
+my_model_list <- list(m1, m2, m3, m4)
+
 my_aic_results <- compare_models(
-  list(m1, m2, m3, m4),
+  my_model_list,
   digits = 2
 )
+
+# Compile all parameter estimates across models (could be helpful
+#  if you wanted to do model averaging).
+all_estimates <- model_list_estimates(
+  my_model_list
+)
+
+round(all_estimates$estimates, 2)
 
 # Looks like the first model, which included
 #  income and impervious cover, is the best
