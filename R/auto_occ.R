@@ -493,6 +493,8 @@ auto_occ <- function(formula, y, det_covs = NULL, occ_covs = NULL,
     mle_table$Est,
     mle_table$SE
   )
+  # p value via wald statistic
+  mle_table$p <- pnorm(-abs(mle_table$Est)/ mle_table$SE) * 2
   aic <- 2 * fit$value + 2 * nparms
 
   if(length(to_go) == 0){
