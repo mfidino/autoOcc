@@ -183,5 +183,18 @@ test_that(
         history_columns = "^Week"
       )
     )
+    # error on duplicate names
+    od <- opossum_det_hist
+    od$Site[od$Site == "D02-HUP0"] <- "D02-BMT1"
+    expect_error(
+      f(
+        x = od,
+        site_column = "Site",
+        time_column = "Season",
+        history_columns = "^Week"
+      )
+    )
+
+
   }
 )
