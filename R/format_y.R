@@ -128,6 +128,21 @@ format_y <- function(x, site_column, time_column, history_columns, report = TRUE
       as.numeric(tmp)
     )
   }
+  # Determine if there are duplicates within seasons
+  dup_in_season <- table(
+    x[,site_column], x[,time_column]
+  )
+  if(any(dup_in_season > 1)){
+    err <- which(dup_in_season > 1, arr.ind = TRUE)
+    err <- unique(row.names(err))
+    err <- paste0(
+      "\nAll sites must be unique within sampling periods,\nbut there are duplicated site names.\n",
+      "\nDuplicated site(s): ",
+      toString(err),
+      "\n\n"
+    )
+    stop(err)
+  }
 
   # get indices, number of sites
   nsite <- length(
