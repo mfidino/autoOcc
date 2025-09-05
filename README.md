@@ -13,7 +13,7 @@
 
 ## News
 
-2025 - 09 - 05: The `predict` function has a new argument included in it titled `condition`. If `type = 'psi'`, then the user can decide if they want the unconditional steady-state occupancy estimate (`condition = 'unconditional'), occupancy given species presence in the previous timestep (`condition = z1`), or occupancy given species absence in the previous timestep (`condition = z0`). A new column (`pred_type`) has been
+2025 - 09 - 05: The `predict` function has a new argument included in it titled `condition`. If `type = 'psi'`, then the user can decide if they want the unconditional steady-state occupancy estimate (`condition = 'unconditional'`), occupancy given species presence in the previous timestep (`condition = z1`), or occupancy given species absence in the previous timestep (`condition = z0`). A new column (`pred_type`) has been
 included in the output to remind a user what type of predictions they requested via `predict()`.
 
 2023 - 07 - 18: Released version 0.1.1. There are two new features and two
