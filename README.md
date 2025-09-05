@@ -4,7 +4,7 @@
 <!-- badges: start -->
 [![Codecov test coverage](https://codecov.io/gh/mfidino/autoOcc/branch/main/graph/badge.svg)](https://codecov.io/gh/mfidino/autoOcc?branch=main)
 [![R build status](https://github.com/mfidino/autoOcc/workflows/R-CMD-check/badge.svg)](https://github.com/mfidino/autoOcc/actions)
-[![DOI](https://zenodo.org/badge/515959073.svg)](https://zenodo.org/doi/10.5281/zenodo.10882566)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17064781.svg)](https://doi.org/10.5281/zenodo.17064781)
 <!-- badges: end -->
 
 # autoOcc 0.1.1
