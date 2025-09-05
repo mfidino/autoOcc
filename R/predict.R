@@ -15,7 +15,10 @@
 #'
 #' @param level Tolerance / confidence level for predictions. Defaults to \code{0.95}.
 #'
-#' @param nsim The number of parmater simulations to be made via the
+#' @param condition The type of estimate you want to generate if you are estimating
+#' occupancy. Can either be \code{'unconditional'}, \code{'z0'}, or \code{'z1'}.
+#' Defaults to \code{'unconditional'}, see details for additional information.
+#' @param nsim The number of parameter simulations to be made via the
 #' models estimated parameters, variance covariance matrix,
 #' and \code{\link[mvtnorm]{rmvnorm}}. Defaults to 3000.
 #'
@@ -45,16 +48,30 @@
 #' model. This method was chosen as it creates functionally similar uncertainty
 #' estimates as a Bayesian autologistic occupancy model.
 #'
-#' For occupancy, each set of simulated parameters is used to
-#' generate two logit-linear predictions for the supplied covariates:
+#' Predictions can be returned as either *unconditional* or *conditional*:
+#' \itemize{
+#'   \item *Unconditional (steady-state)*: the long-term expected occupancy
+#'   probability under a given set of covariates, without conditioning on the
+#'   actual occupancy state of a site. This is analogous to the equilibrium
+#'   expectation of a dynamic occupancy model (\eqn{\gamma / (\gamma + \epsilon)}) and
+#'   can be returned by including \code{condition = 'unconditional'} as an arguement.
+#'   \item *Conditional*: the occupancy probability given a site’s occupancy
+#'   state in the previous time interval. These predictions depend on whether
+#'   a site was occupied (\code{condition = 'z1'}) or unoccupied (\code{condition = 'z0'})  at time \eqn{t}, and so they are more
+#'   specific to site history.
+#' }
+#'
+#' For unconditional occupancy predictions, each set of simulated parameters is used to
+#' generate two logit-linear predictors:
 #'
 #' \deqn{\Large \mathrm{logit}(\psi_a) = \beta_0 + \beta_1 \times x_1 + \dots + \beta_n \times x_n}
 #'
-#'and
+#' and
 #'
-#'\deqn{\Large \mathrm{logit}(\psi_b) = \beta_0 + \beta_1 \times x_1 + \dots + \beta_n \times x_n + \theta}
+#' \deqn{\Large \mathrm{logit}(\psi_b) = \beta_0 + \beta_1 \times x_1 + \dots + \beta_n \times x_n + \theta}
 #'
-#' where \eqn{\theta} is the estimated autologistic term. Following this, the expected occupancy of an autologisitic occupancy model is
+#' where \eqn{\theta} is the estimated autologistic term. Following this, the
+#' unconditional expected occupancy is:
 #'
 #' \deqn{\huge
 #'  \frac{
@@ -63,10 +80,7 @@
 #'  \mathrm{ilogit}(\psi_a) + (1 - \mathrm{ilogit}(\psi_b))
 #'  }
 #'}
-#' which is similar to the expected occupancy of a dynamic occupancy model (\eqn{\gamma \div (\gamma + \epsilon)})
-#' where \eqn{\gamma} is colonization and \eqn{\epsilon} is extinction. Following this calculation for all simuated
-#' parameter estimates and covariate values, the median estimate and confidence intervals are collected across
-#' simulations for each covariate value.
+#'
 #'
 #' Detection predictions are more straight-forward given there is no need to
 #' derive the expected value. Simulations are still carried out to create to
@@ -76,7 +90,7 @@
 #'
 #' If \code{newdata} is supplied, this function will return a \code{data.frame}
 #' with a number of rows equal to \code{newdata} and three columns.
-#' \itemize{
+#' \describe{
 #'   \item{estimate}{Median estimate from the model}
 #'   \item{lower}{Lower confidence interval, based on confidence level supplied to \code{level}}
 #'   \item{upper}{Upper confidence interval, based on confidence level supplied to \code{level}}
@@ -195,7 +209,7 @@
 #' lines(opo_income$upper ~ income_real$Income, lwd = 2, lty = 2)
 
 
-predict.auto_occ_fit <- function(object,type, newdata = NULL,level = 0.95, nsim = 3000, seed = NULL,...){
+predict.auto_occ_fit <- function(object,type, newdata = NULL,level = 0.95, nsim = 3000, condition = c("unconditional", "z0", "z1"), seed = NULL,...){
   if(!inherits(object,"auto_occ_fit")){
     stop("model object must be of class auto_occ_fit")
   }
@@ -204,6 +218,12 @@ predict.auto_occ_fit <- function(object,type, newdata = NULL,level = 0.95, nsim 
   }
   if(!type %in% c("psi","rho")){
     stop("type must be either' psi' for occupancy or 'rho' for detection." )
+  }
+  if(length(condition)>1){
+    condition <- "unconditional"
+  }
+  if(!condition %in% c("unconditional", "z0", "z1")){
+    stop("condition must be either 'unconditional', 'z0', or z1'")
   }
   if(!is.numeric(level)){
     stop("level must be a numeric")
@@ -363,8 +383,22 @@ predict.auto_occ_fit <- function(object,type, newdata = NULL,level = 0.95, nsim 
     # logit-predictions with theta
     e2 <- cbind(X,1) %*% t(mvn_samples)
     e2 <- sweep(e2, 1, offset, FUN = "+")
-    # calculate expected occupancy
-    e3 <- plogis(e1) / (plogis(e1) + (1 - plogis(e2)))
+    # now decide based on condition
+    if (condition == "z0") {
+      # colonization-only predictions
+      e3 <- plogis(e1)
+    }
+    if (condition == "z1") {
+      # persistence-only predictions
+      e3 <- plogis(e2)
+    }
+    if(condition == "unconditional"){
+      # unconditional / steady-state
+      e3 <- plogis(e1) / (plogis(e1) + (1 - plogis(e2)))
+    }
+    {
+
+    }
   }
   if(type == "rho"){
     e2 <- X %*% t(mvn_samples)
@@ -385,6 +419,18 @@ predict.auto_occ_fit <- function(object,type, newdata = NULL,level = 0.95, nsim 
     lower = predictions[,1],
     upper = predictions[,3]
   )
+  # add on the prediction type
+  if(type == "psi"){
+    if(condition == "unconditional"){
+      pred_frame$pred_type <- "psi-unconditional"
+    } else if(condition == "z0"){
+      pred_frame$pred_type <- "psi-z0"
+    } else if(condition == "z1"){
+      pred_frame$pred_type <- "psi-z1"
+    }
+  } else if(type == "rho"){
+    pred_frame$pred_type <- "rho"
+  }
   if(tack_on){
     pred_frame <- cbind.data.frame(
       list(

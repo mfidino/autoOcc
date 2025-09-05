@@ -122,7 +122,7 @@
 #' @export
 #' @importFrom stats as.formula
 #' @importFrom stats optim
-#' @importFrom stats qnorm
+#' @importFrom stats qnorm pnorm
 #' @importFrom methods new
 #'
 #' @returns

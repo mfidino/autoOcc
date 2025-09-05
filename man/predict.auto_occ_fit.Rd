@@ -11,6 +11,7 @@
   newdata = NULL,
   level = 0.95,
   nsim = 3000,
+  condition = c("unconditional", "z0", "z1"),
   seed = NULL,
   ...
 )
@@ -26,9 +27,13 @@ If omitted, the fitted linear predictors are used.}
 
 \item{level}{Tolerance / confidence level for predictions. Defaults to \code{0.95}.}
 
-\item{nsim}{The number of parmater simulations to be made via the
+\item{nsim}{The number of parameter simulations to be made via the
 models estimated parameters, variance covariance matrix,
 and \code{\link[mvtnorm]{rmvnorm}}. Defaults to 3000.}
+
+\item{condition}{The type of estimate you want to generate if you are estimating
+occupancy. Can either be \code{'unconditional'}, \code{'z0'}, or \code{'z1'}.
+Defaults to \code{'unconditional'}, see details for additional information.}
 
 \item{seed}{The random seed to set for simulations, defaults to \code{NULL}.}
 
@@ -37,7 +42,7 @@ and \code{\link[mvtnorm]{rmvnorm}}. Defaults to 3000.}
 \value{
 If \code{newdata} is supplied, this function will return a \code{data.frame}
 with a number of rows equal to \code{newdata} and three columns.
-\itemize{
+\describe{
   \item{estimate}{Median estimate from the model}
   \item{lower}{Lower confidence interval, based on confidence level supplied to \code{level}}
   \item{upper}{Upper confidence interval, based on confidence level supplied to \code{level}}
@@ -63,8 +68,21 @@ and a variance covariance matrix supplied by the \code{\link[autoOcc]{auto_occ}}
 model. This method was chosen as it creates functionally similar uncertainty
 estimates as a Bayesian autologistic occupancy model.
 
-For occupancy, each set of simulated parameters is used to
-generate two logit-linear predictions for the supplied covariates:
+Predictions can be returned as either *unconditional* or *conditional*:
+\itemize{
+  \item *Unconditional (steady-state)*: the long-term expected occupancy
+  probability under a given set of covariates, without conditioning on the
+  actual occupancy state of a site. This is analogous to the equilibrium
+  expectation of a dynamic occupancy model (\eqn{\gamma / (\gamma + \epsilon)}) and
+  can be returned by including \code{condition = 'unconditional'} as an arguement.
+  \item *Conditional*: the occupancy probability given a site’s occupancy
+  state in the previous time interval. These predictions depend on whether
+  a site was occupied (\code{condition = 'z1'}) or unoccupied (\code{condition = 'z0'})  at time \eqn{t}, and so they are more
+  specific to site history.
+}
+
+For unconditional occupancy predictions, each set of simulated parameters is used to
+generate two logit-linear predictors:
 
 \deqn{\Large \mathrm{logit}(\psi_a) = \beta_0 + \beta_1 \times x_1 + \dots + \beta_n \times x_n}
 
@@ -72,7 +90,8 @@ and
 
 \deqn{\Large \mathrm{logit}(\psi_b) = \beta_0 + \beta_1 \times x_1 + \dots + \beta_n \times x_n + \theta}
 
-where \eqn{\theta} is the estimated autologistic term. Following this, the expected occupancy of an autologisitic occupancy model is
+where \eqn{\theta} is the estimated autologistic term. Following this, the
+unconditional expected occupancy is:
 
 \deqn{\huge
  \frac{
@@ -81,10 +100,7 @@ where \eqn{\theta} is the estimated autologistic term. Following this, the expec
  \mathrm{ilogit}(\psi_a) + (1 - \mathrm{ilogit}(\psi_b))
  }
 }
-which is similar to the expected occupancy of a dynamic occupancy model (\eqn{\gamma \div (\gamma + \epsilon)})
-where \eqn{\gamma} is colonization and \eqn{\epsilon} is extinction. Following this calculation for all simuated
-parameter estimates and covariate values, the median estimate and confidence intervals are collected across
-simulations for each covariate value.
+
 
 Detection predictions are more straight-forward given there is no need to
 derive the expected value. Simulations are still carried out to create to
