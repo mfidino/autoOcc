@@ -25,7 +25,7 @@
 #' order they are input (e.g., \code{m1 == model_list[[1]])}). The default
 #' data.frame includes:
 #'
-#' \itemize{
+#' \describe{
 #'   \item{model}{The model names}
 #'   \item{npar}{The number of parameters in the model}
 #'   \item{AIC}{AIC score of a fitted model}

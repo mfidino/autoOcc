@@ -30,7 +30,7 @@
 #' \code{\link{auto_occ}}. The classes of the associated columns in \code{x} may vary somewhat
 #'  \code{format_y}. Mor specifically:
 #'
-#'  \itemize{
+#'  \describe{
 #'    \item{The site column}{Should preferably be either of class \code{character} or
 #'      \code{factor}. If this column is either a \code{numeric} or \code{integer},
 #'      \code{format_y} will provide a warning that it is converting the column
