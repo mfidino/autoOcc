@@ -13,6 +13,8 @@
 
 ## News
 
+2025- 11 - 13: I published a companion article to this R package titled "Estimating species occupancy across multiple sampling seasons with autologistic occupancy models via the autoOcc R package" in the Journal of Animal Ecology [Link to paper here](https://besjournals.onlinelibrary.wiley.com/doi/10.1111/1365-2656.70184). This paper details the model, showcases how autologistic models perform relative to dynamic models, and works through a couple of case studies. 
+
 2025 - 09 - 05: The `predict` function has a new argument included in it titled `condition`. If `type = 'psi'`, then the user can decide if they want the unconditional steady-state occupancy estimate (`condition = 'unconditional'`), occupancy given species presence in the previous timestep (`condition = z1`), or occupancy given species absence in the previous timestep (`condition = z0`). A new column (`pred_type`) has been
 included in the output to remind a user what type of predictions they requested via `predict()`.
 
