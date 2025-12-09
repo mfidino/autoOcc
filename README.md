@@ -41,13 +41,11 @@ were included within a primary sampling period within `autoOcc::format_y`. Previ
 
 
 
-## Status: Experimental, active developement
+## Status: Stable
 
 ---
 
-This package is in active development. I'll likely just add in new functions
-when I locate some pain points while working with it. That said, the current
-functions are stable.
+At the moment I am not working on additional updates to this package. But if you have some requests, feel free to make them on the Issues page of this repo.
 
 ## Installation
 
